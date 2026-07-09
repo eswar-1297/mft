@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (build + unit + integration tests)
+    runs-on: ubuntu-latest
+    services:
+      # Real Postgres for the integration tests (Testcontainers-free: the tests read IT_DB_URL).
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: mft
+          POSTGRES_USER: mft
+          POSTGRES_PASSWORD: mft
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mft -d mft"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Provision non-superuser runtime role (so RLS is exercised)
+        env:
+          PGPASSWORD: mft
+        run: psql -h localhost -U mft -d mft -f db/init/01-app-role.sql
+      - name: Build + test
+        working-directory: backend
+        env:
+          # Integration tests connect as the NON-superuser runtime role, so the RLS assertions
+          # (a raw findById cannot cross tenants) are genuinely exercised.
+          IT_DB_URL: jdbc:postgresql://localhost:5432/mft
+          IT_DB_USER: mft_app
+          IT_DB_PASSWORD: mft_app
+        run: mvn -B verify
+
+  frontend:
+    name: Frontend (typecheck + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install + build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+  compose:
+    name: Validate docker-compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose file
+        run: docker compose -f docker-compose.yml config >/dev/null

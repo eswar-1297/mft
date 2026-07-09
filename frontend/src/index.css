@@ -1,0 +1,53 @@
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Poppins', system-ui, sans-serif;
+  }
+  body {
+    @apply bg-nearwhite text-ink antialiased;
+  }
+  .dark body {
+    @apply bg-[#0B1020] text-slate-100;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl bg-white shadow-card border border-slate-100;
+  }
+  .dark .card {
+    @apply bg-[#141B2E] border-slate-800;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium
+           transition-colors focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-50
+           disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white hover:bg-brand-dark;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink hover:bg-slate-100;
+  }
+  .dark .btn-ghost {
+    @apply text-slate-200 hover:bg-slate-800;
+  }
+  .input {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-ink
+           placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30;
+  }
+  .dark .input {
+    @apply border-slate-700 bg-[#0F1626] text-slate-100;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium text-muted;
+  }
+}

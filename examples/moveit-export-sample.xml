@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MOVEitTasks>
+  <Task name="Nightly Payroll to HDFC" schedule="0 2 * * *">
+    <Source type="folder" path="/payroll/outbound"/>
+    <Process pgpEncrypt="true"/>
+    <Destination type="sftp" host="sftp.hdfcbank.com" port="22" path="/incoming/payroll"/>
+  </Task>
+  <Task name="Claims from Star Health" schedule="0 */4 * * *">
+    <Source type="sftp" host="sftp.starhealth.in" path="/outbound/claims"/>
+    <Process pgpDecrypt="true"/>
+    <Destination type="folder" path="/claims/inbound"/>
+  </Task>
+  <Task name="Daily S3 backup to Reliance">
+    <Source type="s3" path="reports/daily"/>
+    <Destination type="s3" path="archive/reliance"/>
+  </Task>
+  <Task name="Vendor invoices to Deloitte" schedule="0 6 * * 1-5">
+    <Source type="folder" path="/invoices"/>
+    <Process pgpEncrypt="true"/>
+    <Destination type="sftp" host="ftp.deloitte.com" path="/upload"/>
+  </Task>
+  <Task name="Local archive rotation">
+    <Source type="folder" path="/tmp/spool"/>
+    <Destination type="folder" path="/archive"/>
+  </Task>
+</MOVEitTasks>

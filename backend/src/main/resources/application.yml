@@ -1,0 +1,110 @@
+spring:
+  application:
+    name: cloudfuze-mft
+  datasource:
+    # RUNTIME connection: a NON-superuser role so PostgreSQL row-level security actually enforces
+    # tenant isolation (superusers/owners bypass RLS). Provisioned by db/init/01-app-role.sql.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mft}
+    username: ${DB_USER:mft_app}
+    password: ${DB_PASSWORD:mft_app}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+  jpa:
+    hibernate:
+      # Flyway is the single source of truth for the schema. Hibernate never emits DDL.
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    # MIGRATIONS run as the owner/admin (creates tables, enables + FORCEs RLS, owns policies).
+    url: ${DB_ADMIN_URL:${DB_URL:jdbc:postgresql://localhost:5432/mft}}
+    user: ${DB_ADMIN_USER:mft}
+    password: ${DB_ADMIN_PASSWORD:mft}
+  servlet:
+    multipart:
+      max-file-size: ${MAX_UPLOAD_SIZE:1GB}
+      max-request-size: ${MAX_UPLOAD_SIZE:1GB}
+
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+# --- Application security configuration ---
+mft:
+  jwt:
+    # Base64-encoded 256-bit (or larger) secret. MUST be overridden in every real environment.
+    # Generate one with:  openssl rand -base64 48
+    # Value may be a literal, or a secret reference resolved by SecretResolver:
+    #   file:/run/secrets/jwt   (K8s/Docker secret, or KMS/Vault materialized to a file)
+    #   env:SOME_VAR
+    # In the `prod` profile the app refuses to start if this is still the dev default.
+    secret: ${JWT_SECRET:ZGV2LW9ubHktaW5zZWN1cmUtc2VjcmV0LWNoYW5nZS1tZS1iZWZvcmUtcHJvZC0xMjM0NTY3OA==}
+    issuer: cloudfuze-mft
+    access-token-ttl-minutes: ${JWT_ACCESS_TTL_MIN:30}
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  storage:
+    # S3-compatible object store. On-prem: MinIO. SaaS: real AWS S3 (drop endpoint, use IAM).
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    region: ${S3_REGION:us-east-1}
+    bucket: ${S3_BUCKET:mft-files}
+    access-key: ${S3_ACCESS_KEY:mftminio}
+    secret-key: ${S3_SECRET_KEY:mftminio123}
+    # MinIO needs path-style access; set false for real AWS S3 (virtual-hosted style).
+    path-style: ${S3_PATH_STYLE:true}
+  temporal:
+    # Dev: `temporal server start-dev`. Prod: a real Temporal cluster or Temporal Cloud.
+    target: ${TEMPORAL_TARGET:127.0.0.1:7233}
+    namespace: ${TEMPORAL_NAMESPACE:default}
+    task-queue: ${TEMPORAL_TASK_QUEUE:mft-transfers}
+  crypto:
+    # Master key for the credential vault (AES-256-GCM), base64-encoded 32 bytes. MUST be
+    # overridden in every real environment. Like mft.jwt.secret, may be a literal or a
+    # file:/env: reference (source it from KMS/Vault in prod). The `prod` profile refuses the
+    # dev default. Generate one with:  openssl rand -base64 32
+    master-key: ${MFT_CRED_KEY:ZGV2LW9ubHktY3JlZC1rZXktY2hhbmdlLW1lISEzMmI=}
+  # First-run bootstrap: creates one tenant + one owner account if the database is empty.
+  # Change these before first launch, or set them via environment variables.
+  bootstrap:
+    enabled: ${BOOTSTRAP_ENABLED:true}
+    tenant-name: ${BOOTSTRAP_TENANT_NAME:CloudFuze Demo}
+    tenant-slug: ${BOOTSTRAP_TENANT_SLUG:demo}
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:admin@cloudfuze.com}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:ChangeMe!2026}
+    admin-name: ${BOOTSTRAP_ADMIN_NAME:CloudFuze Admin}
+  mfa:
+    issuer: ${MFA_ISSUER:CloudFuze MFT}
+  oidc:
+    # Enterprise SSO. Point these at the customer's IdP (Okta, Azure AD, Keycloak, ...).
+    # Empty issuer disables SSO. The ID token is validated against the issuer's JWKS.
+    enabled: ${OIDC_ENABLED:false}
+    issuer: ${OIDC_ISSUER:}
+    audience: ${OIDC_AUDIENCE:}
+  ai:
+    # AI Copilot. When an Anthropic API key is set, the Copilot uses Claude to enhance its
+    # answers; otherwise it runs a deterministic rule-based engine (fully functional, no key).
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: ${AI_MODEL:claude-opus-4-8}
+
+logging:
+  level:
+    org.springframework.security: INFO
+    com.cloudfuze.mft: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
