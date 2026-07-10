@@ -2,6 +2,7 @@ package com.cloudfuze.mft.transfer;
 
 import com.cloudfuze.mft.as2.As2Partner;
 import com.cloudfuze.mft.config.TemporalProperties;
+import com.cloudfuze.mft.connector.FtpsConnectionDetails;
 import com.cloudfuze.mft.connector.SftpConnectionDetails;
 import com.cloudfuze.mft.tenant.TenantContext;
 import com.cloudfuze.mft.transfer.workflow.TransferJob;
@@ -48,6 +49,28 @@ public class TransferOrchestrator {
         TransferJob job = new TransferJob(tenantId, t.getId().toString(), TransferDirection.SFTP_PUSH,
                 storageKey, remotePath, details.host(), details.portOrDefault(),
                 details.username(), details.password(), details.expectedHostKey(), null);
+        startWorkflow(t, job);
+        return t;
+    }
+
+    public Transfer startFtpsPull(FtpsConnectionDetails details, String remotePath) {
+        String tenantId = requireTenant();
+        Transfer t = transferService.createTransfer(
+                TransferDirection.FTPS_PULL, remotePath, TransferService.basename(remotePath));
+        TransferJob job = new TransferJob(tenantId, t.getId().toString(), TransferDirection.FTPS_PULL,
+                remotePath, remotePath, details.host(), details.portOrDefault(),
+                details.username(), details.password(), null, null);
+        startWorkflow(t, job);
+        return t;
+    }
+
+    public Transfer startFtpsPush(String storageKey, FtpsConnectionDetails details, String remotePath) {
+        String tenantId = requireTenant();
+        Transfer t = transferService.createTransfer(
+                TransferDirection.FTPS_PUSH, storageKey, TransferService.basename(remotePath));
+        TransferJob job = new TransferJob(tenantId, t.getId().toString(), TransferDirection.FTPS_PUSH,
+                storageKey, remotePath, details.host(), details.portOrDefault(),
+                details.username(), details.password(), null, null);
         startWorkflow(t, job);
         return t;
     }

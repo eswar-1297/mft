@@ -5,6 +5,8 @@ import com.cloudfuze.mft.as2.As2PartnerService;
 import com.cloudfuze.mft.as2.As2Service;
 import com.cloudfuze.mft.common.ApiException;
 import com.cloudfuze.mft.common.Checksums;
+import com.cloudfuze.mft.connector.FtpsConnectionDetails;
+import com.cloudfuze.mft.connector.FtpsConnector;
 import com.cloudfuze.mft.connector.SftpConnectionDetails;
 import com.cloudfuze.mft.connector.SftpConnector;
 import com.cloudfuze.mft.connector.cloud.CloudConnector;
@@ -33,17 +35,19 @@ public class StepExecutor {
 
     private final StorageService storage;
     private final SftpConnector sftp;
+    private final FtpsConnector ftps;
     private final PartnerService partnerService;
     private final PgpService pgp;
     private final ConnectorService connectorService;
     private final As2PartnerService as2Partners;
     private final As2Service as2;
 
-    public StepExecutor(StorageService storage, SftpConnector sftp, PartnerService partnerService,
-                        PgpService pgp, ConnectorService connectorService,
+    public StepExecutor(StorageService storage, SftpConnector sftp, FtpsConnector ftps,
+                        PartnerService partnerService, PgpService pgp, ConnectorService connectorService,
                         As2PartnerService as2Partners, As2Service as2) {
         this.storage = storage;
         this.sftp = sftp;
+        this.ftps = ftps;
         this.partnerService = partnerService;
         this.pgp = pgp;
         this.connectorService = connectorService;
@@ -83,13 +87,18 @@ public class StepExecutor {
                 delete(stage);
             }
         }
-        // SFTP pull from a partner
+        // SFTP or FTPS pull from a partner, depending on the saved partner's protocol.
         Partner partner = partner(step);
         String remotePath = require(step, "remotePath");
-        SftpConnectionDetails details = partnerService.toConnectionDetails(partner, step.cfg("password"));
         Path stage = stage("pickup");
         try {
-            sftp.download(details, remotePath, stage);
+            if ("FTPS".equals(partner.getProtocol())) {
+                FtpsConnectionDetails details = partnerService.toFtpsConnectionDetails(partner, step.cfg("password"));
+                ftps.download(details, remotePath, stage);
+            } else {
+                SftpConnectionDetails details = partnerService.toConnectionDetails(partner, step.cfg("password"));
+                sftp.download(details, remotePath, stage);
+            }
             StorageService.StoredObject stored = storage.putFile(stage, basename(remotePath), null);
             return new Artifact(stored.key(), basename(remotePath), stored.sha256(), stored.size());
         } finally {
@@ -173,13 +182,20 @@ public class StepExecutor {
                 delete(stage);
             }
         }
+        // SFTP or FTPS send to a partner, depending on the saved partner's protocol.
         Partner partner = partner(step);
         String remotePath = require(step, "remotePath");
-        SftpConnectionDetails details = partnerService.toConnectionDetails(partner, step.cfg("password"));
         Path stage = stage("send");
         try {
             storage.getToFile(current.key(), stage);
-            long bytes = sftp.upload(details, remotePath, stage);
+            long bytes;
+            if ("FTPS".equals(partner.getProtocol())) {
+                FtpsConnectionDetails details = partnerService.toFtpsConnectionDetails(partner, step.cfg("password"));
+                bytes = ftps.upload(details, remotePath, stage);
+            } else {
+                SftpConnectionDetails details = partnerService.toConnectionDetails(partner, step.cfg("password"));
+                bytes = sftp.upload(details, remotePath, stage);
+            }
             return new Artifact(current.key(), current.filename(), Checksums.sha256(stage), bytes);
         } finally {
             delete(stage);

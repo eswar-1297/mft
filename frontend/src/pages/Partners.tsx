@@ -231,6 +231,7 @@ function AddPartnerModal({
   onSaved: () => void
 }) {
   const [name, setName] = useState('')
+  const [protocol, setProtocol] = useState<'SFTP' | 'FTPS'>('SFTP')
   const [host, setHost] = useState('')
   const [port, setPort] = useState(22)
   const [username, setUsername] = useState('')
@@ -238,14 +239,19 @@ function AddPartnerModal({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
+  function onProtocolChange(p: 'SFTP' | 'FTPS') {
+    setProtocol(p)
+    setPort(p === 'FTPS' ? 21 : 22)
+  }
+
   async function save() {
     setBusy(true)
     setErr(null)
     try {
-      await api('/api/partners', { method: 'POST', body: { name, host, port, username, password } })
+      await api('/api/partners', { method: 'POST', body: { name, protocol, host, port, username, password } })
       onSaved()
       onClose()
-      setName(''); setHost(''); setPort(22); setUsername(''); setPassword('')
+      setName(''); setProtocol('SFTP'); setHost(''); setPort(22); setUsername(''); setPassword('')
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to save partner')
     } finally {
@@ -261,9 +267,16 @@ function AddPartnerModal({
           <label className="label">Partner name</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="HDFC Bank" />
         </div>
+        <div>
+          <label className="label">Protocol</label>
+          <select className="input" value={protocol} onChange={(e) => onProtocolChange(e.target.value as 'SFTP' | 'FTPS')}>
+            <option value="SFTP">SFTP</option>
+            <option value="FTPS">FTPS (explicit TLS)</option>
+          </select>
+        </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2">
-            <label className="label">SFTP host</label>
+            <label className="label">{protocol} host</label>
             <input className="input" value={host} onChange={(e) => setHost(e.target.value)} />
           </div>
           <div>

@@ -28,7 +28,7 @@ export type TransferStatus = 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
 
 export interface Transfer {
   id: string
-  direction: 'SFTP_PULL' | 'SFTP_PUSH' | 'AS2_SEND' | 'AS2_RECEIVE'
+  direction: 'SFTP_PULL' | 'SFTP_PUSH' | 'FTPS_PULL' | 'FTPS_PUSH' | 'AS2_SEND' | 'AS2_RECEIVE'
   status: TransferStatus
   sourceRef: string
   destRef: string | null

@@ -3,6 +3,7 @@ package com.cloudfuze.mft.transfer;
 import com.cloudfuze.mft.as2.As2Partner;
 import com.cloudfuze.mft.as2.As2PartnerService;
 import com.cloudfuze.mft.common.ApiException;
+import com.cloudfuze.mft.connector.FtpsConnectionDetails;
 import com.cloudfuze.mft.connector.SftpConnectionDetails;
 import com.cloudfuze.mft.partner.Partner;
 import com.cloudfuze.mft.partner.PartnerService;
@@ -64,23 +65,35 @@ public class TransferController {
         return ResponseEntity.accepted().body(TransferView.of(t));
     }
 
-    /** Pull using a saved partner's stored (vault-encrypted) credentials. */
+    /** Pull using a saved partner's stored (vault-encrypted) credentials — SFTP or FTPS. */
     @PostMapping("/pull")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','OPERATOR')")
     public ResponseEntity<TransferView> pullViaPartner(@Valid @RequestBody PartnerPullRequest req) {
         Partner partner = partnerService.get(req.partnerId());
-        SftpConnectionDetails details = partnerService.toConnectionDetails(partner, req.password());
-        Transfer t = orchestrator.startPull(details, req.remotePath());
+        Transfer t;
+        if ("FTPS".equals(partner.getProtocol())) {
+            FtpsConnectionDetails details = partnerService.toFtpsConnectionDetails(partner, req.password());
+            t = orchestrator.startFtpsPull(details, req.remotePath());
+        } else {
+            SftpConnectionDetails details = partnerService.toConnectionDetails(partner, req.password());
+            t = orchestrator.startPull(details, req.remotePath());
+        }
         return ResponseEntity.accepted().body(TransferView.of(t));
     }
 
-    /** Push a stored object to a saved partner using its stored (vault-encrypted) credentials. */
+    /** Push a stored object to a saved partner using its stored (vault-encrypted) credentials — SFTP or FTPS. */
     @PostMapping("/push")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','OPERATOR')")
     public ResponseEntity<TransferView> pushViaPartner(@Valid @RequestBody PartnerPushRequest req) {
         Partner partner = partnerService.get(req.partnerId());
-        SftpConnectionDetails details = partnerService.toConnectionDetails(partner, req.password());
-        Transfer t = orchestrator.startPush(req.storageKey(), details, req.remotePath());
+        Transfer t;
+        if ("FTPS".equals(partner.getProtocol())) {
+            FtpsConnectionDetails details = partnerService.toFtpsConnectionDetails(partner, req.password());
+            t = orchestrator.startFtpsPush(req.storageKey(), details, req.remotePath());
+        } else {
+            SftpConnectionDetails details = partnerService.toConnectionDetails(partner, req.password());
+            t = orchestrator.startPush(req.storageKey(), details, req.remotePath());
+        }
         return ResponseEntity.accepted().body(TransferView.of(t));
     }
 

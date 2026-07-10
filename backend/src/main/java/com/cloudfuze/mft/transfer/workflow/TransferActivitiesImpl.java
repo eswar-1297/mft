@@ -2,6 +2,7 @@ package com.cloudfuze.mft.transfer.workflow;
 
 import com.cloudfuze.mft.as2.As2Partner;
 import com.cloudfuze.mft.as2.As2PartnerService;
+import com.cloudfuze.mft.connector.FtpsConnectionDetails;
 import com.cloudfuze.mft.connector.SftpConnectionDetails;
 import com.cloudfuze.mft.tenant.TenantContext;
 import com.cloudfuze.mft.transfer.TransferResult;
@@ -41,6 +42,8 @@ public class TransferActivitiesImpl implements TransferActivities {
             return switch (job.direction()) {
                 case SFTP_PULL -> transferService.performPull(details, job.remotePath());
                 case SFTP_PUSH -> transferService.performPush(job.sourceRef(), details, job.remotePath());
+                case FTPS_PULL -> transferService.performFtpsPull(ftpsDetails(job), job.remotePath());
+                case FTPS_PUSH -> transferService.performFtpsPush(job.sourceRef(), ftpsDetails(job), job.remotePath());
                 case AS2_SEND -> {
                     As2Partner partner = as2Partners.get(UUID.fromString(job.as2PartnerId()));
                     yield transferService.performAs2Send(job.sourceRef(), partner);
@@ -67,6 +70,10 @@ public class TransferActivitiesImpl implements TransferActivities {
     public void recordRetry(String tenantId, String transferId, int attempt, String reason) {
         inTenant(tenantId, () ->
                 transferService.recordRetryScheduled(UUID.fromString(transferId), attempt, reason));
+    }
+
+    private static FtpsConnectionDetails ftpsDetails(TransferJob job) {
+        return new FtpsConnectionDetails(job.sftpHost(), job.sftpPort(), job.sftpUsername(), job.sftpPassword());
     }
 
     private void inTenant(String tenantId, Runnable action) {

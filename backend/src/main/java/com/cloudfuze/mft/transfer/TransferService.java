@@ -6,6 +6,8 @@ import com.cloudfuze.mft.audit.AuditService;
 import com.cloudfuze.mft.auth.AuthPrincipal;
 import com.cloudfuze.mft.common.ApiException;
 import com.cloudfuze.mft.common.Checksums;
+import com.cloudfuze.mft.connector.FtpsConnectionDetails;
+import com.cloudfuze.mft.connector.FtpsConnector;
 import com.cloudfuze.mft.connector.SftpConnectionDetails;
 import com.cloudfuze.mft.connector.SftpConnector;
 import com.cloudfuze.mft.storage.StorageService;
@@ -35,14 +37,16 @@ public class TransferService {
     private final TransferRepository transfers;
     private final StorageService storage;
     private final SftpConnector sftp;
+    private final FtpsConnector ftps;
     private final As2Service as2;
     private final AuditService audit;
 
     public TransferService(TransferRepository transfers, StorageService storage,
-                           SftpConnector sftp, As2Service as2, AuditService audit) {
+                           SftpConnector sftp, FtpsConnector ftps, As2Service as2, AuditService audit) {
         this.transfers = transfers;
         this.storage = storage;
         this.sftp = sftp;
+        this.ftps = ftps;
         this.as2 = as2;
         this.audit = audit;
     }
@@ -118,6 +122,31 @@ public class TransferService {
         try {
             storage.getToFile(storageKey, stage);
             long bytes = sftp.upload(details, remotePath, stage);
+            return new TransferResult(remotePath, bytes, Checksums.sha256(stage));
+        } finally {
+            deleteQuietly(stage);
+        }
+    }
+
+    /** Pull a partner's file over FTPS into our object store. One attempt; throws on failure. */
+    public TransferResult performFtpsPull(FtpsConnectionDetails details, String remotePath) {
+        String filename = basename(remotePath);
+        Path stage = createStage("mft-ftps-pull-");
+        try {
+            ftps.download(details, remotePath, stage);
+            StorageService.StoredObject stored = storage.putFile(stage, filename, null);
+            return new TransferResult(stored.key(), stored.size(), stored.sha256());
+        } finally {
+            deleteQuietly(stage);
+        }
+    }
+
+    /** Push one of our stored objects out to a partner over FTPS. One attempt; throws on failure. */
+    public TransferResult performFtpsPush(String storageKey, FtpsConnectionDetails details, String remotePath) {
+        Path stage = createStage("mft-ftps-push-");
+        try {
+            storage.getToFile(storageKey, stage);
+            long bytes = ftps.upload(details, remotePath, stage);
             return new TransferResult(remotePath, bytes, Checksums.sha256(stage));
         } finally {
             deleteQuietly(stage);

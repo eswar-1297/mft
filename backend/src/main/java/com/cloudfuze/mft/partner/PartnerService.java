@@ -2,6 +2,7 @@ package com.cloudfuze.mft.partner;
 
 import com.cloudfuze.mft.audit.AuditService;
 import com.cloudfuze.mft.common.ApiException;
+import com.cloudfuze.mft.connector.FtpsConnectionDetails;
 import com.cloudfuze.mft.connector.SftpConnectionDetails;
 import com.cloudfuze.mft.connector.SftpConnector;
 import com.cloudfuze.mft.crypto.CryptoVault;
@@ -81,6 +82,23 @@ public class PartnerService {
         // Carry the pinned host-key fingerprint so the connector rejects a mismatched server.
         return new SftpConnectionDetails(p.getHost(), p.getPort(), p.getUsername(), password,
                 p.getHostKeyFingerprint());
+    }
+
+    /**
+     * Resolve a partner into live FTPS connection details, decrypting the stored secret. If the
+     * partner has no stored secret, {@code overridePassword} must be supplied.
+     */
+    public FtpsConnectionDetails toFtpsConnectionDetails(Partner p, String overridePassword) {
+        String password;
+        if (overridePassword != null && !overridePassword.isBlank()) {
+            password = overridePassword;
+        } else if (p.hasStoredSecret()) {
+            password = vault.decrypt(p.getSecretEnc());
+        } else {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "Partner has no stored credential; supply a password for this transfer");
+        }
+        return new FtpsConnectionDetails(p.getHost(), p.getPort(), p.getUsername(), password);
     }
 
     /**
