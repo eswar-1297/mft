@@ -45,8 +45,34 @@ public class PartnerService {
                 : null;
         Partner p = new Partner(UUID.randomUUID(), req.name(), req.protocolOrDefault(),
                 req.host(), req.port(), req.username(), secretEnc);
+        p.setRemoteDirectory(req.normalizedRemoteDirectory());
         partners.save(p);
         audit.record("partner.created", "partner", p.getId().toString(),
+                Map.of("name", p.getName(), "host", p.getHost(), "hasSecret", p.hasStoredSecret()));
+        return p;
+    }
+
+    /**
+     * Update an existing partner. The password is optional: leave it blank to keep the stored
+     * secret, or supply a new one to replace it (re-encrypted into the vault).
+     */
+    @Transactional
+    public Partner update(UUID id, PartnerRequest req) {
+        Partner p = get(id);
+        // Only reject a name collision if the name actually changed to one another partner owns.
+        if (!p.getName().equals(req.name()) && partners.existsByName(req.name())) {
+            throw new ApiException(HttpStatus.CONFLICT, "A partner with that name already exists");
+        }
+        p.setName(req.name());
+        p.setHost(req.host());
+        p.setPort(req.port());
+        p.setUsername(req.username());
+        p.setRemoteDirectory(req.normalizedRemoteDirectory());
+        if (req.password() != null && !req.password().isBlank()) {
+            p.setSecretEnc(vault.encrypt(req.password()));
+        }
+        partners.save(p);
+        audit.record("partner.updated", "partner", p.getId().toString(),
                 Map.of("name", p.getName(), "host", p.getHost(), "hasSecret", p.hasStoredSecret()));
         return p;
     }

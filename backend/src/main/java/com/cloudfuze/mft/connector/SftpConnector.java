@@ -48,6 +48,36 @@ public class SftpConnector {
         });
     }
 
+    /** True if {@code dirPath} exists on the partner and is a directory. Never creates anything. */
+    public boolean directoryExists(SftpConnectionDetails details, String dirPath) {
+        return withSftp(details, sftp -> {
+            try {
+                return sftp.stat(dirPath).isDirectory() ? 1L : 0L;
+            } catch (IOException notFound) {
+                return 0L;
+            }
+        }) == 1L;
+    }
+
+    /** Explicitly create a remote directory path (each missing segment), like {@code mkdir -p}. */
+    public void makeDirectories(SftpConnectionDetails details, String dirPath) {
+        withSftp(details, sftp -> {
+            StringBuilder current = new StringBuilder();
+            for (String segment : dirPath.split("/")) {
+                if (segment.isEmpty()) {
+                    continue;
+                }
+                current.append('/').append(segment);
+                try {
+                    sftp.mkdir(current.toString());
+                } catch (IOException alreadyExists) {
+                    // Segment already present — fine; keep walking down the path.
+                }
+            }
+            return 0L;
+        });
+    }
+
     /**
      * Connect (and authenticate) once purely to learn the server's host-key fingerprint, so an
      * admin can pin it. Returns a fingerprint like {@code "SHA256:abc…"}.

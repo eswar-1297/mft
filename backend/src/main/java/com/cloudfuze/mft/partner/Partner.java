@@ -50,6 +50,10 @@ public class Partner {
     @Column(name = "host_key_fingerprint")
     private String hostKeyFingerprint;
 
+    /** Default remote directory (drop folder) for this partner, e.g. "/inbound". Null = root. */
+    @Column(name = "remote_directory")
+    private String remoteDirectory;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -80,6 +84,10 @@ public class Partner {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getProtocol() {
         return protocol;
     }
@@ -88,16 +96,32 @@ public class Partner {
         return host;
     }
 
+    public void setHost(String host) {
+        this.host = host;
+    }
+
     public int getPort() {
         return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
     }
 
     public String getUsername() {
         return username;
     }
 
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
     public String getSecretEnc() {
         return secretEnc;
+    }
+
+    public void setSecretEnc(String secretEnc) {
+        this.secretEnc = secretEnc;
     }
 
     public String getHostKeyFingerprint() {
@@ -106,6 +130,14 @@ public class Partner {
 
     public void setHostKeyFingerprint(String hostKeyFingerprint) {
         this.hostKeyFingerprint = hostKeyFingerprint;
+    }
+
+    public String getRemoteDirectory() {
+        return remoteDirectory;
+    }
+
+    public void setRemoteDirectory(String remoteDirectory) {
+        this.remoteDirectory = remoteDirectory;
     }
 
     public Instant getCreatedAt() {

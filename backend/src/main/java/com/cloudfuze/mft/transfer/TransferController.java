@@ -1,7 +1,9 @@
 package com.cloudfuze.mft.transfer;
 
 import com.cloudfuze.mft.common.ApiException;
+import com.cloudfuze.mft.common.RemoteDirectoryMissingException;
 import com.cloudfuze.mft.connector.SftpConnectionDetails;
+import com.cloudfuze.mft.connector.SftpConnector;
 import com.cloudfuze.mft.partner.Partner;
 import com.cloudfuze.mft.partner.PartnerService;
 import com.cloudfuze.mft.transfer.dto.PartnerPullRequest;
@@ -32,12 +34,37 @@ public class TransferController {
     private final TransferOrchestrator orchestrator;
     private final TransferRepository transfers;
     private final PartnerService partnerService;
+    private final SftpConnector sftpConnector;
 
     public TransferController(TransferOrchestrator orchestrator, TransferRepository transfers,
-                             PartnerService partnerService) {
+                             PartnerService partnerService, SftpConnector sftpConnector) {
         this.orchestrator = orchestrator;
         this.transfers = transfers;
         this.partnerService = partnerService;
+        this.sftpConnector = sftpConnector;
+    }
+
+    /**
+     * Start a push, but first make sure the destination folder exists. If it does not and the
+     * caller has not authorized creating it, throw {@link RemoteDirectoryMissingException} (→ 409)
+     * and start nothing. If creation is authorized, create the folder first, then transfer.
+     */
+    private Transfer startPushSafely(String storageKey, SftpConnectionDetails details,
+                                     String remotePath, boolean createRemoteDir) {
+        String dir = parentDirectory(remotePath);
+        if (dir != null && !sftpConnector.directoryExists(details, dir)) {
+            if (!createRemoteDir) {
+                throw new RemoteDirectoryMissingException(dir);
+            }
+            sftpConnector.makeDirectories(details, dir);
+        }
+        return orchestrator.startPush(storageKey, details, remotePath);
+    }
+
+    /** The folder part of a remote file path, or null when the file sits at the root. */
+    private static String parentDirectory(String remotePath) {
+        int slash = remotePath.lastIndexOf('/');
+        return slash > 0 ? remotePath.substring(0, slash) : null;
     }
 
     /**
@@ -55,7 +82,8 @@ public class TransferController {
     @PostMapping("/sftp-push")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','OPERATOR')")
     public ResponseEntity<TransferView> push(@Valid @RequestBody SftpPushRequest req) {
-        Transfer t = orchestrator.startPush(req.storageKey(), req.sftp().toDetails(), req.remotePath());
+        Transfer t = startPushSafely(req.storageKey(), req.sftp().toDetails(), req.remotePath(),
+                req.createRemoteDir());
         return ResponseEntity.accepted().body(TransferView.of(t));
     }
 
@@ -75,7 +103,7 @@ public class TransferController {
     public ResponseEntity<TransferView> pushViaPartner(@Valid @RequestBody PartnerPushRequest req) {
         Partner partner = partnerService.get(req.partnerId());
         SftpConnectionDetails details = partnerService.toConnectionDetails(partner, req.password());
-        Transfer t = orchestrator.startPush(req.storageKey(), details, req.remotePath());
+        Transfer t = startPushSafely(req.storageKey(), details, req.remotePath(), req.createRemoteDir());
         return ResponseEntity.accepted().body(TransferView.of(t));
     }
 

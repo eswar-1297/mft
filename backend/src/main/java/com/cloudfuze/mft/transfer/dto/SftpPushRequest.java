@@ -8,5 +8,6 @@ import jakarta.validation.constraints.NotNull;
 public record SftpPushRequest(
         @NotBlank String storageKey,
         @Valid @NotNull SftpDetailsDto sftp,
-        @NotBlank String remotePath) {
+        @NotBlank String remotePath,
+        boolean createRemoteDir) {
 }

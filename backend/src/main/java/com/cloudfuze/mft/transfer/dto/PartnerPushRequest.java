@@ -10,5 +10,6 @@ public record PartnerPushRequest(
         @NotBlank String storageKey,
         @NotNull UUID partnerId,
         @NotBlank String remotePath,
-        String password) {
+        String password,
+        boolean createRemoteDir) {
 }

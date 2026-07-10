@@ -33,6 +33,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatus()).body(ApiError.of(ex.getMessage()));
     }
 
+    @ExceptionHandler(RemoteDirectoryMissingException.class)
+    public ResponseEntity<Map<String, Object>> handleRemoteDirMissing(RemoteDirectoryMissingException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", "remote_directory_missing",
+                "directory", ex.getDirectory(),
+                "message", ex.getMessage(),
+                "timestamp", Instant.now().toString()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> fields = ex.getBindingResult().getFieldErrors().stream()

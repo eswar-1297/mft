@@ -16,9 +16,11 @@ export function clearToken() {
 
 export class ApiError extends Error {
   status: number
-  constructor(status: number, message: string) {
+  data: any
+  constructor(status: number, message: string, data?: unknown) {
     super(message)
     this.status = status
+    this.data = data
   }
 }
 
@@ -58,7 +60,7 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
   if (!res.ok) {
     const message =
       (data && (data.message || data.error)) || `Request failed (${res.status})`
-    throw new ApiError(res.status, message)
+    throw new ApiError(res.status, message, data)
   }
   return data as T
 }

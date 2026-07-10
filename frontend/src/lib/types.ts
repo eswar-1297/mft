@@ -84,6 +84,9 @@ export interface Partner {
   port: number
   username: string
   hasStoredSecret: boolean
+  hasPinnedHostKey: boolean
+  hostKeyFingerprint: string | null
+  remoteDirectory: string | null
   createdAt: string
 }
 

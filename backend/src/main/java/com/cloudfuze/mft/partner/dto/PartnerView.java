@@ -13,6 +13,7 @@ public record PartnerView(
         boolean hasStoredSecret,
         boolean hasPinnedHostKey,
         String hostKeyFingerprint,
+        String remoteDirectory,
         String createdAt) {
 
     public static PartnerView of(Partner p) {
@@ -26,6 +27,7 @@ public record PartnerView(
                 p.hasStoredSecret(),
                 p.hasPinnedHostKey(),
                 p.getHostKeyFingerprint(),
+                p.getRemoteDirectory(),
                 p.getCreatedAt().toString());
     }
 }
