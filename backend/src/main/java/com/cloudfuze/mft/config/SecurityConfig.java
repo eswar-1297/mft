@@ -43,6 +43,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login", "/api/auth/oidc/**", "/api/health").permitAll()
                         .requestMatchers("/actuator/health/**").permitAll()
+                        // AS2 partners carry no bearer token; the sender is authenticated by their
+                        // message's own CMS signature instead (verified in As2Service.receive()).
+                        .requestMatchers("/api/as2/inbound/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(unauthorizedEntryPoint()))
                 .addFilterBefore(new JwtAuthFilter(jwtService),

@@ -1,5 +1,6 @@
 package com.cloudfuze.mft.transfer;
 
+import com.cloudfuze.mft.as2.As2Partner;
 import com.cloudfuze.mft.config.TemporalProperties;
 import com.cloudfuze.mft.connector.SftpConnectionDetails;
 import com.cloudfuze.mft.tenant.TenantContext;
@@ -35,7 +36,7 @@ public class TransferOrchestrator {
                 TransferDirection.SFTP_PULL, remotePath, TransferService.basename(remotePath));
         TransferJob job = new TransferJob(tenantId, t.getId().toString(), TransferDirection.SFTP_PULL,
                 remotePath, remotePath, details.host(), details.portOrDefault(),
-                details.username(), details.password(), details.expectedHostKey());
+                details.username(), details.password(), details.expectedHostKey(), null);
         startWorkflow(t, job);
         return t;
     }
@@ -46,7 +47,18 @@ public class TransferOrchestrator {
                 TransferDirection.SFTP_PUSH, storageKey, TransferService.basename(remotePath));
         TransferJob job = new TransferJob(tenantId, t.getId().toString(), TransferDirection.SFTP_PUSH,
                 storageKey, remotePath, details.host(), details.portOrDefault(),
-                details.username(), details.password(), details.expectedHostKey());
+                details.username(), details.password(), details.expectedHostKey(), null);
+        startWorkflow(t, job);
+        return t;
+    }
+
+    /** Sign, encrypt, and send a stored object to an AS2 partner. Starts a durable workflow. */
+    public Transfer startAs2Send(String storageKey, As2Partner partner) {
+        String tenantId = requireTenant();
+        Transfer t = transferService.createTransfer(
+                TransferDirection.AS2_SEND, storageKey, TransferService.basename(storageKey));
+        TransferJob job = new TransferJob(tenantId, t.getId().toString(), TransferDirection.AS2_SEND,
+                storageKey, null, null, 0, null, null, null, partner.getId().toString());
         startWorkflow(t, job);
         return t;
     }

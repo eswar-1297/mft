@@ -28,7 +28,7 @@ export type TransferStatus = 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
 
 export interface Transfer {
   id: string
-  direction: 'SFTP_PULL' | 'SFTP_PUSH'
+  direction: 'SFTP_PULL' | 'SFTP_PUSH' | 'AS2_SEND' | 'AS2_RECEIVE'
   status: TransferStatus
   sourceRef: string
   destRef: string | null
@@ -85,6 +85,20 @@ export interface Partner {
   username: string
   hasStoredSecret: boolean
   createdAt: string
+}
+
+export interface As2Partner {
+  id: string
+  name: string
+  partnerAs2Id: string
+  partnerCertificatePem: string
+  inboundUrl: string
+  createdAt: string
+}
+
+export interface As2Identity {
+  as2Id: string
+  certificatePem: string
 }
 
 export interface DraftWorkflowResponse {

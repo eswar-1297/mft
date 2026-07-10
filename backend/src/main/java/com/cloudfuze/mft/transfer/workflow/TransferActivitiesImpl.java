@@ -1,5 +1,7 @@
 package com.cloudfuze.mft.transfer.workflow;
 
+import com.cloudfuze.mft.as2.As2Partner;
+import com.cloudfuze.mft.as2.As2PartnerService;
 import com.cloudfuze.mft.connector.SftpConnectionDetails;
 import com.cloudfuze.mft.tenant.TenantContext;
 import com.cloudfuze.mft.transfer.TransferResult;
@@ -17,9 +19,11 @@ import java.util.UUID;
 public class TransferActivitiesImpl implements TransferActivities {
 
     private final TransferService transferService;
+    private final As2PartnerService as2Partners;
 
-    public TransferActivitiesImpl(TransferService transferService) {
+    public TransferActivitiesImpl(TransferService transferService, As2PartnerService as2Partners) {
         this.transferService = transferService;
+        this.as2Partners = as2Partners;
     }
 
     @Override
@@ -37,6 +41,12 @@ public class TransferActivitiesImpl implements TransferActivities {
             return switch (job.direction()) {
                 case SFTP_PULL -> transferService.performPull(details, job.remotePath());
                 case SFTP_PUSH -> transferService.performPush(job.sourceRef(), details, job.remotePath());
+                case AS2_SEND -> {
+                    As2Partner partner = as2Partners.get(UUID.fromString(job.as2PartnerId()));
+                    yield transferService.performAs2Send(job.sourceRef(), partner);
+                }
+                case AS2_RECEIVE -> throw new IllegalStateException(
+                        "AS2_RECEIVE is recorded directly by the inbound endpoint, never started as a job");
             };
         } finally {
             TenantContext.clear();

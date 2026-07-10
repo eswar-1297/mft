@@ -1,9 +1,12 @@
 package com.cloudfuze.mft.transfer;
 
+import com.cloudfuze.mft.as2.As2Partner;
+import com.cloudfuze.mft.as2.As2PartnerService;
 import com.cloudfuze.mft.common.ApiException;
 import com.cloudfuze.mft.connector.SftpConnectionDetails;
 import com.cloudfuze.mft.partner.Partner;
 import com.cloudfuze.mft.partner.PartnerService;
+import com.cloudfuze.mft.transfer.dto.As2SendRequest;
 import com.cloudfuze.mft.transfer.dto.PartnerPullRequest;
 import com.cloudfuze.mft.transfer.dto.PartnerPushRequest;
 import com.cloudfuze.mft.transfer.dto.SftpPullRequest;
@@ -32,12 +35,14 @@ public class TransferController {
     private final TransferOrchestrator orchestrator;
     private final TransferRepository transfers;
     private final PartnerService partnerService;
+    private final As2PartnerService as2PartnerService;
 
     public TransferController(TransferOrchestrator orchestrator, TransferRepository transfers,
-                             PartnerService partnerService) {
+                             PartnerService partnerService, As2PartnerService as2PartnerService) {
         this.orchestrator = orchestrator;
         this.transfers = transfers;
         this.partnerService = partnerService;
+        this.as2PartnerService = as2PartnerService;
     }
 
     /**
@@ -76,6 +81,15 @@ public class TransferController {
         Partner partner = partnerService.get(req.partnerId());
         SftpConnectionDetails details = partnerService.toConnectionDetails(partner, req.password());
         Transfer t = orchestrator.startPush(req.storageKey(), details, req.remotePath());
+        return ResponseEntity.accepted().body(TransferView.of(t));
+    }
+
+    /** Sign, encrypt, and send a stored object to a saved AS2 partner. Starts a durable workflow. */
+    @PostMapping("/as2-send")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','OPERATOR')")
+    public ResponseEntity<TransferView> as2Send(@Valid @RequestBody As2SendRequest req) {
+        As2Partner partner = as2PartnerService.get(req.as2PartnerId());
+        Transfer t = orchestrator.startAs2Send(req.storageKey(), partner);
         return ResponseEntity.accepted().body(TransferView.of(t));
     }
 

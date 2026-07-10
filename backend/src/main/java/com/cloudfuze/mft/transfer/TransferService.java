@@ -1,5 +1,7 @@
 package com.cloudfuze.mft.transfer;
 
+import com.cloudfuze.mft.as2.As2Partner;
+import com.cloudfuze.mft.as2.As2Service;
 import com.cloudfuze.mft.audit.AuditService;
 import com.cloudfuze.mft.auth.AuthPrincipal;
 import com.cloudfuze.mft.common.ApiException;
@@ -33,13 +35,15 @@ public class TransferService {
     private final TransferRepository transfers;
     private final StorageService storage;
     private final SftpConnector sftp;
+    private final As2Service as2;
     private final AuditService audit;
 
     public TransferService(TransferRepository transfers, StorageService storage,
-                           SftpConnector sftp, AuditService audit) {
+                           SftpConnector sftp, As2Service as2, AuditService audit) {
         this.transfers = transfers;
         this.storage = storage;
         this.sftp = sftp;
+        this.as2 = as2;
         this.audit = audit;
     }
 
@@ -115,6 +119,22 @@ public class TransferService {
             storage.getToFile(storageKey, stage);
             long bytes = sftp.upload(details, remotePath, stage);
             return new TransferResult(remotePath, bytes, Checksums.sha256(stage));
+        } finally {
+            deleteQuietly(stage);
+        }
+    }
+
+    /** Sign, encrypt, and send a stored object to an AS2 partner. One attempt; throws on failure. */
+    public TransferResult performAs2Send(String storageKey, As2Partner partner) {
+        Path stage = createStage("mft-as2-send-");
+        try {
+            storage.getToFile(storageKey, stage);
+            As2Service.As2SendResult result = as2.send(partner, stage, basename(storageKey));
+            if (!result.success()) {
+                throw new IllegalStateException("AS2 partner rejected the message: " + result.disposition());
+            }
+            return new TransferResult("as2:" + partner.getPartnerAs2Id(), result.bytesSent(),
+                    Checksums.sha256(stage));
         } finally {
             deleteQuietly(stage);
         }

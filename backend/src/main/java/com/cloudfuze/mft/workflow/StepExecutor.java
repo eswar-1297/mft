@@ -1,5 +1,8 @@
 package com.cloudfuze.mft.workflow;
 
+import com.cloudfuze.mft.as2.As2Partner;
+import com.cloudfuze.mft.as2.As2PartnerService;
+import com.cloudfuze.mft.as2.As2Service;
 import com.cloudfuze.mft.common.ApiException;
 import com.cloudfuze.mft.common.Checksums;
 import com.cloudfuze.mft.connector.SftpConnectionDetails;
@@ -33,14 +36,19 @@ public class StepExecutor {
     private final PartnerService partnerService;
     private final PgpService pgp;
     private final ConnectorService connectorService;
+    private final As2PartnerService as2Partners;
+    private final As2Service as2;
 
     public StepExecutor(StorageService storage, SftpConnector sftp, PartnerService partnerService,
-                        PgpService pgp, ConnectorService connectorService) {
+                        PgpService pgp, ConnectorService connectorService,
+                        As2PartnerService as2Partners, As2Service as2) {
         this.storage = storage;
         this.sftp = sftp;
         this.partnerService = partnerService;
         this.pgp = pgp;
         this.connectorService = connectorService;
+        this.as2Partners = as2Partners;
+        this.as2 = as2;
     }
 
     public Artifact execute(WorkflowStep step, Artifact current) {
@@ -143,6 +151,24 @@ public class StepExecutor {
                 storage.getToFile(current.key(), stage);
                 long bytes = client.upload(objectKey, stage);
                 return new Artifact(current.key(), current.filename(), Checksums.sha256(stage), bytes);
+            } finally {
+                delete(stage);
+            }
+        }
+        if ("AS2".equalsIgnoreCase(dest)) {
+            // Sign, encrypt, and POST the artifact to an AS2 partner. Note: AS2 already encrypts the
+            // message end-to-end, so a PGP_ENCRYPT step earlier in the same pipeline is redundant
+            // (not harmful, just double-encryption) — worth a UI hint, not a code-level gate.
+            As2Partner partner = as2Partners.get(UUID.fromString(require(step, "as2PartnerId")));
+            Path stage = stage("send-as2");
+            try {
+                storage.getToFile(current.key(), stage);
+                As2Service.As2SendResult result = as2.send(partner, stage, current.filename());
+                if (!result.success()) {
+                    throw new ApiException(HttpStatus.BAD_GATEWAY,
+                            "AS2 partner rejected the message: " + result.disposition());
+                }
+                return new Artifact(current.key(), current.filename(), Checksums.sha256(stage), result.bytesSent());
             } finally {
                 delete(stage);
             }

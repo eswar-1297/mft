@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Download, RefreshCw, Upload } from 'lucide-react'
+import { Download, RefreshCw, Upload, ShieldCheck } from 'lucide-react'
 import { api } from '../lib/api'
 import { usePoll } from '../lib/usePoll'
-import type { Page, SftpDetails, Transfer } from '../lib/types'
+import type { Page, SftpDetails, Transfer, As2Partner } from '../lib/types'
 import { Card, EmptyState, ErrorBanner, Modal, StatusBadge, Spinner } from '../components/ui'
 import { formatBytes, formatDateTime } from '../lib/format'
 
@@ -12,6 +12,7 @@ export default function Transfers() {
   const { data, error, refresh } = usePoll<Page<Transfer>>(() => api('/api/transfers?size=100'), 3000)
   const [pushOpen, setPushOpen] = useState(false)
   const [pullOpen, setPullOpen] = useState(false)
+  const [as2Open, setAs2Open] = useState(false)
   const [selected, setSelected] = useState<Transfer | null>(null)
 
   const transfers = data?.content ?? []
@@ -26,6 +27,9 @@ export default function Transfers() {
         <div className="flex gap-2">
           <button className="btn-ghost" onClick={() => setPullOpen(true)}>
             <Download size={16} /> Pull from partner
+          </button>
+          <button className="btn-ghost" onClick={() => setAs2Open(true)}>
+            <ShieldCheck size={16} /> AS2 Send
           </button>
           <button className="btn-primary" onClick={() => setPushOpen(true)}>
             <Upload size={16} /> Push to partner
@@ -65,7 +69,7 @@ export default function Transfers() {
                     onClick={() => setSelected(t)}
                   >
                     <td className="py-2.5 font-medium">{t.filename}</td>
-                    <td className="py-2.5 text-muted">{t.direction.replace('SFTP_', 'SFTP ')}</td>
+                    <td className="py-2.5 text-muted">{t.direction.replace('_', ' ')}</td>
                     <td className="py-2.5">
                       <StatusBadge status={t.status} />
                     </td>
@@ -82,6 +86,7 @@ export default function Transfers() {
 
       <PushModal open={pushOpen} onClose={() => setPushOpen(false)} onStarted={refresh} />
       <PullModal open={pullOpen} onClose={() => setPullOpen(false)} onStarted={refresh} />
+      <As2SendModal open={as2Open} onClose={() => setAs2Open(false)} onStarted={refresh} />
       <DetailDrawer transfer={selected} onClose={() => setSelected(null)} />
     </div>
   )
@@ -203,6 +208,59 @@ function PullModal({ open, onClose, onStarted }: { open: boolean; onClose: () =>
         <button className="btn-primary w-full" disabled={busy} onClick={start}>
           {busy ? <Spinner className="text-white" /> : 'Start durable transfer'}
         </button>
+      </div>
+    </Modal>
+  )
+}
+
+function As2SendModal({ open, onClose, onStarted }: { open: boolean; onClose: () => void; onStarted: () => void }) {
+  const { data } = usePoll<As2Partner[]>(() => api('/api/as2-partners'), 0)
+  const as2Partners = data ?? []
+  const [storageKey, setStorageKey] = useState('')
+  const [as2PartnerId, setAs2PartnerId] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  async function start() {
+    setBusy(true)
+    setErr(null)
+    try {
+      await api('/api/transfers/as2-send', { method: 'POST', body: { storageKey, as2PartnerId } })
+      onStarted()
+      onClose()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to start')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal open={open} title="Send a stored object via AS2" onClose={onClose}>
+      <div className="space-y-3">
+        <ErrorBanner message={err} />
+        {as2Partners.length === 0 ? (
+          <EmptyState>No AS2 partners yet — add one on the Partners page first.</EmptyState>
+        ) : (
+          <>
+            <div>
+              <label className="label">Storage key (from Ad-hoc Send upload)</label>
+              <input className="input" value={storageKey} onChange={(e) => setStorageKey(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">AS2 partner</label>
+              <select className="input" value={as2PartnerId} onChange={(e) => setAs2PartnerId(e.target.value)}>
+                <option value="">Select a partner...</option>
+                {as2Partners.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.partnerAs2Id})</option>
+                ))}
+              </select>
+            </div>
+            <button className="btn-primary w-full" disabled={busy || !storageKey || !as2PartnerId} onClick={start}>
+              {busy ? <Spinner className="text-white" /> : 'Sign, encrypt & send'}
+            </button>
+          </>
+        )}
       </div>
     </Modal>
   )
