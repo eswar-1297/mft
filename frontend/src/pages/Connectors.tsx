@@ -75,8 +75,8 @@ export default function Connectors() {
                 <button className="text-muted hover:text-danger" onClick={() => remove(c)}><Trash2 size={16} /></button>
               </div>
               <dl className="mt-4 space-y-1 text-sm">
-                <div className="flex justify-between"><dt className="text-muted">Bucket</dt><dd className="font-medium">{c.bucket}</dd></div>
-                <div className="flex justify-between"><dt className="text-muted">Endpoint</dt><dd className="truncate font-medium">{c.endpoint || 'AWS'}</dd></div>
+                <div className="flex justify-between"><dt className="text-muted">{c.type === 'AZURE_BLOB' ? 'Container' : 'Bucket'}</dt><dd className="font-medium">{c.bucket}</dd></div>
+                <div className="flex justify-between"><dt className="text-muted">Endpoint</dt><dd className="truncate font-medium">{c.endpoint || (c.type === 'AZURE_BLOB' ? 'Azure default' : 'AWS')}</dd></div>
               </dl>
               <div className="mt-3 flex items-center gap-2">
                 <button className="btn-ghost !py-1 text-xs" disabled={testing === c.id} onClick={() => test(c)}>

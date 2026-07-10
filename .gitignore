@@ -25,3 +25,6 @@ deploy/tls/server.key
 
 # Backup output (DB dumps) — never commit
 backups/
+
+# Playwright MCP debug artifacts (screenshots/snapshots taken during dev sessions)
+.playwright-mcp/
