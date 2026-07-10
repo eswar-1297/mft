@@ -1,0 +1,640 @@
+<title>Managed File Transfer: A Field Guide</title>
+<style>
+  :root{
+    --ink:#14171c; --ink-soft:#4b535a; --paper:#eef0ea; --paper-raised:#e2e5dd;
+    --rule:#c7ccc0; --rule-strong:#a9afa1;
+    --accent:#b5691a; --accent-ink:#6e3f0f; --accent-bg:#f3e2cd;
+    --good:#2f6b45; --good-bg:#e1ecdf;
+    --bad:#a3352a; --bad-bg:#f3ded9;
+    --link:#8a4c12;
+    --code-bg:#e3e6dc;
+    --shadow: 0 1px 0 rgba(20,23,28,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink:#e9ebe4; --ink-soft:#a8afa4; --paper:#15181c; --paper-raised:#1c2024;
+      --rule:#333a3d; --rule-strong:#454e51;
+      --accent:#e0a25a; --accent-ink:#f0c690; --accent-bg:#332512;
+      --good:#7fbf8f; --good-bg:#132118;
+      --bad:#e08a7c; --bad-bg:#2a1512;
+      --link:#e0a25a;
+      --code-bg:#202427;
+      --shadow: 0 1px 0 rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#e9ebe4; --ink-soft:#a8afa4; --paper:#15181c; --paper-raised:#1c2024;
+    --rule:#333a3d; --rule-strong:#454e51;
+    --accent:#e0a25a; --accent-ink:#f0c690; --accent-bg:#332512;
+    --good:#7fbf8f; --good-bg:#132118;
+    --bad:#e08a7c; --bad-bg:#2a1512;
+    --link:#e0a25a;
+    --code-bg:#202427;
+  }
+  :root[data-theme="light"]{
+    --ink:#14171c; --ink-soft:#4b535a; --paper:#eef0ea; --paper-raised:#e2e5dd;
+    --rule:#c7ccc0; --rule-strong:#a9afa1;
+    --accent:#b5691a; --accent-ink:#6e3f0f; --accent-bg:#f3e2cd;
+    --good:#2f6b45; --good-bg:#e1ecdf;
+    --bad:#a3352a; --bad-bg:#f3ded9;
+    --link:#8a4c12;
+    --code-bg:#e3e6dc;
+  }
+
+  *{box-sizing:border-box;}
+  html{background:var(--paper);}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    font-size:17px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{ font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, Menlo, monospace; }
+  h1,h2,h3,.eyebrow,.label{
+    font-family: "Bahnschrift", "SF Compact Rounded", ui-sans-serif, system-ui, Arial, sans-serif;
+    font-stretch: condensed;
+    text-wrap: balance;
+  }
+  a{ color:var(--link); }
+  a:focus-visible, button:focus-visible, summary:focus-visible{
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+
+  /* ===== Shell layout ===== */
+  .shell{ display:grid; grid-template-columns: 260px minmax(0,1fr); gap:0; max-width:1180px; margin:0 auto; }
+  @media (max-width: 900px){ .shell{ grid-template-columns: 1fr; } }
+
+  nav.toc{
+    position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+    padding:2rem 1.25rem 2rem 1.5rem; border-right:1px solid var(--rule);
+  }
+  @media (max-width:900px){
+    nav.toc{ position:static; height:auto; border-right:none; border-bottom:1px solid var(--rule); padding:1.25rem 1.5rem; }
+  }
+  nav.toc .brand{ display:block; margin-bottom:1.5rem; }
+  nav.toc .brand .mark{ font-size:.72rem; letter-spacing:.14em; color:var(--ink-soft); text-transform:uppercase; }
+  nav.toc .brand .name{ font-size:1.05rem; font-weight:700; letter-spacing:.02em; }
+  nav.toc ol{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.15rem; }
+  nav.toc li a{
+    display:flex; gap:.6rem; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+    padding:.32rem .4rem; border-radius:3px; font-size:.86rem;
+  }
+  nav.toc li a .tag{ font-family:inherit; font-size:.68rem; letter-spacing:.08em; color:var(--accent); min-width:3.4em; }
+  nav.toc li a:hover, nav.toc li a.active{ color:var(--ink); background:var(--paper-raised); }
+  nav.toc li a.active .tag{ color:var(--accent); }
+
+  main{ padding:2.25rem 2.75rem 6rem; min-width:0; }
+  @media (max-width:640px){ main{ padding:1.5rem 1.15rem 4rem; } }
+
+  header.masthead{ max-width:62ch; margin-bottom:2.75rem; }
+  header.masthead .eyebrow{
+    font-size:.74rem; letter-spacing:.16em; text-transform:uppercase; color:var(--accent);
+    margin-bottom:.6rem; display:block; font-weight:600;
+  }
+  header.masthead h1{ font-size:2.35rem; line-height:1.08; margin:0 0 .75rem; font-weight:700; letter-spacing:-.01em; }
+  header.masthead .dek{ font-size:1.12rem; color:var(--ink-soft); margin:0; font-family: Georgia, serif; font-style:italic; }
+
+  .stamp{
+    margin-top:1.6rem; border:1px solid var(--rule-strong); border-left:4px solid var(--accent);
+    background:var(--paper-raised); padding:1rem 1.2rem; border-radius:2px;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size:.82rem; line-height:1.6; color:var(--ink-soft);
+  }
+  .stamp strong{ color:var(--ink); }
+
+  section.dossier{ max-width:70ch; margin: 3.4rem 0 0; scroll-margin-top:1.5rem; }
+  section.dossier.wide{ max-width:none; }
+  section.dossier > .sechead{
+    display:flex; align-items:baseline; gap:.75rem; border-bottom:2px solid var(--ink); padding-bottom:.5rem; margin-bottom:1.4rem;
+  }
+  section.dossier > .sechead .tag{
+    font-family: ui-monospace, Consolas, monospace; font-size:.78rem; letter-spacing:.1em; color:var(--accent);
+    background:var(--accent-bg); padding:.15rem .5rem; border-radius:2px; white-space:nowrap;
+  }
+  section.dossier > .sechead h2{ font-size:1.5rem; margin:0; font-weight:700; }
+  section.dossier h3{ font-size:1.12rem; margin:1.8rem 0 .6rem; font-weight:700; }
+  section.dossier p{ margin:0 0 1rem; }
+  section.dossier ul, section.dossier ol{ margin:0 0 1.1rem; padding-left:1.3rem; }
+  section.dossier li{ margin-bottom:.4rem; }
+  section.dossier .wide-inner{ max-width:70ch; }
+
+  .note{
+    font-size:.94rem; color:var(--ink-soft); border-left:3px solid var(--rule-strong); padding:.15rem 0 .15rem 1rem; margin:1.1rem 0;
+  }
+  .general-knowledge{
+    font-size:.9rem; background:var(--paper-raised); border:1px dashed var(--rule-strong); border-radius:3px;
+    padding:.75rem 1rem; margin:1.1rem 0; color:var(--ink-soft);
+  }
+  .general-knowledge .lbl{ font-family: ui-monospace, Consolas, monospace; font-size:.7rem; letter-spacing:.1em; color:var(--accent); text-transform:uppercase; display:block; margin-bottom:.3rem; }
+
+  .src{ font-family: ui-monospace, Consolas, monospace; font-size:.78rem; color:var(--ink-soft); margin:.35rem 0 1.3rem; }
+  .src a{ text-decoration:none; border-bottom:1px dotted var(--link); }
+  .src::before{ content:"sources — "; color:var(--ink-soft); }
+
+  /* status chips */
+  .chip{
+    display:inline-flex; align-items:center; gap:.3rem; font-family: ui-monospace, Consolas, monospace;
+    font-size:.72rem; letter-spacing:.03em; padding:.15rem .5rem; border-radius:20px; font-weight:600;
+    text-transform:uppercase;
+  }
+  .chip.good{ background:var(--good-bg); color:var(--good); }
+  .chip.bad{ background:var(--bad-bg); color:var(--bad); }
+  .chip.neutral{ background:var(--paper-raised); color:var(--ink-soft); border:1px solid var(--rule); }
+  .chip.accent{ background:var(--accent-bg); color:var(--accent-ink); }
+
+  /* tables */
+  .tablewrap{ overflow-x:auto; margin: 0 0 1.6rem; border:1px solid var(--rule); border-radius:3px; }
+  table{ border-collapse:collapse; width:100%; min-width:560px; font-size:.88rem; font-family: ui-sans-serif, system-ui, sans-serif; }
+  table caption{ text-align:left; font-family: ui-monospace, Consolas, monospace; font-size:.72rem; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--ink-soft); padding:.6rem .8rem; border-bottom:1px solid var(--rule); }
+  th, td{ text-align:left; padding:.55rem .8rem; border-bottom:1px solid var(--rule); vertical-align:top; }
+  thead th{ background:var(--paper-raised); font-family: "Bahnschrift", ui-sans-serif, sans-serif; font-stretch:condensed;
+    font-size:.78rem; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); }
+  tbody tr:last-child td{ border-bottom:none; }
+  td.num, th.num{ font-variant-numeric: tabular-nums; text-align:right; }
+  td code, li code{ font-family: ui-monospace, Consolas, monospace; background:var(--code-bg); padding:.05rem .35rem; border-radius:3px; font-size:.85em; }
+
+  .reslist{ list-style:none; margin:0 0 1.4rem; padding:0; display:flex; flex-direction:column; gap:.9rem; }
+  .reslist li{ border:1px solid var(--rule); border-radius:4px; padding:.8rem 1rem; margin:0; }
+  .reslist .rtitle{ font-weight:700; display:block; margin-bottom:.15rem; }
+  .reslist .rtitle a{ text-decoration:none; }
+  .reslist .rtitle a:hover{ text-decoration:underline; }
+  .reslist .rmeta{ font-family: ui-monospace, Consolas, monospace; font-size:.72rem; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.35rem; display:block; }
+  .reslist .rdesc{ font-size:.92rem; color:var(--ink-soft); margin:0; }
+
+  .avoid{ border-color:var(--bad) !important; background:var(--bad-bg); }
+
+  footer.colophon{ max-width:70ch; margin-top:4rem; padding-top:1.5rem; border-top:1px solid var(--rule); font-size:.82rem; color:var(--ink-soft); }
+
+  ::selection{ background:var(--accent-bg); color:var(--accent-ink); }
+
+  @media (prefers-reduced-motion: no-preference){
+    html{ scroll-behavior:smooth; }
+  }
+</style>
+
+<div class="shell">
+  <nav class="toc" aria-label="Table of contents">
+    <a class="brand" href="#top">
+      <span class="mark">Field Guide · Rev. 2026-07-10</span>
+      <span class="name">Managed File Transfer</span>
+    </a>
+    <ol>
+      <li><a href="#proto"><span class="tag">PROTO</span> The protocols</a></li>
+      <li><a href="#ster"><span class="tag">STER</span> IBM Sterling</a></li>
+      <li><a href="#move"><span class="tag">MOVE</span> Progress MOVEit</a></li>
+      <li><a href="#goaw"><span class="tag">GOAW</span> Fortra GoAnywhere</a></li>
+      <li><a href="#couch"><span class="tag">COUCH</span> Couchdrop</a></li>
+      <li><a href="#other"><span class="tag">OTHER</span> Axway, Kiteworks &amp; upstarts</a></li>
+      <li><a href="#incident"><span class="tag">INCID</span> The 2023 breaches</a></li>
+      <li><a href="#trust"><span class="tag">TRUST</span> Compliance buyers demand</a></li>
+      <li><a href="#market"><span class="tag">MARKET</span> How MFT is bought</a></li>
+      <li><a href="#gap"><span class="tag">GAP</span> CloudFuze alignment</a></li>
+      <li><a href="#study"><span class="tag">STUDY</span> Learning path</a></li>
+    </ol>
+  </nav>
+
+  <main id="top">
+    <header class="masthead">
+      <span class="eyebrow">A practitioner's field guide</span>
+      <h1>Managed File Transfer, from the loading dock up</h1>
+      <p class="dek">How IBM Sterling, MOVEit and GoAnywhere actually work when you're logged in as the admin — the protocols they speak, the breaches that reshaped the buyer, and where that leaves CloudFuze MFT.</p>
+
+      <div class="stamp">
+        <strong>How this was built —</strong> researched by fanning out web searches across five angles, fetching 26 sources, and extracting 120 claims. The sources are primary: IBM's own File Gateway tutorial, GoAnywhere's own training and demo pages, Progress's official MOVEit Automation admin guide, CISA's incident advisory, Palo Alto Unit 42's and Rapid7's threat-intel writeups, and Drummond Group's own certification registry. The automated adversarial cross-check pass hit a rate limit mid-run and didn't complete, so treat this as <strong>well-sourced</strong>, not independently triple-verified the way a full pass would be. Paragraphs marked <span class="chip neutral">general knowledge</span> are background the model already holds, not pulled from this research pass — double-check those before repeating them to a customer or auditor.
+      </div>
+    </header>
+
+    <!-- ============ PROTO ============ -->
+    <section class="dossier wide" id="proto">
+      <div class="sechead"><span class="tag">PROTO</span><h2>The protocols, decoded</h2></div>
+      <div class="wide-inner">
+      <p>Every MFT product is, underneath, a box that speaks one or more of these languages to move a file from one company's computer to another's. Which language a partner insists on is usually decided by their <em>industry</em>, not their preference — and it's the single biggest thing a new entrant has to cover to be taken seriously.</p>
+      </div>
+
+      <div class="tablewrap">
+        <table>
+          <caption>Protocol comparison — direction, proof-of-delivery, and who mandates it</caption>
+          <thead><tr><th>Protocol</th><th>Direction</th><th>Delivery proof</th><th>Dominant in</th><th>What it costs to support</th></tr></thead>
+          <tbody>
+            <tr><td><code>SFTP</code></td><td>Push &amp; pull</td><td>None built‑in (app-level checksum)</td><td>General B2B, cloud, SaaS</td><td>Low — CloudFuze already has this</td></tr>
+            <tr><td><code>FTPS</code></td><td>Push &amp; pull</td><td>None built‑in</td><td>Legacy enterprise, government</td><td>Low — TLS-wrapped FTP, well-trodden libraries</td></tr>
+            <tr><td><code>AS2</code></td><td>Push only — receiver must be reachable 24/7</td><td>Signed <strong>MDN</strong> receipt (sync, async, or email‑async)</td><td>US retail (Walmart‑driven) &amp; healthcare</td><td>High — plus a Drummond interoperability certification round</td></tr>
+            <tr><td><code>Connect:Direct</code></td><td>Point‑to‑point, both ends run a "node"</td><td>Checkpoint‑restart acknowledgement</td><td>Banking &amp; finance batch</td><td>Very high — proprietary IBM protocol, no open spec</td></tr>
+            <tr><td><code>OFTP2</code></td><td>Push &amp; pull in the <em>same session</em></td><td>Signed EERP / NERP receipt</td><td>European automotive (ODETTE), EU public sector</td><td>High — own OFTP2 server + certificates + an Odette ID</td></tr>
+            <tr><td><code>PeSIT</code></td><td>Push &amp; pull</td><td>Session‑level acknowledgement</td><td>French banking &amp; EDI</td><td>Medium — narrower footprint than AS2/OFTP2</td></tr>
+            <tr><td><code>HTTPS / REST API</code></td><td>Whatever the API defines</td><td>HTTP status + application payload</td><td>Modern SaaS‑to‑SaaS integration</td><td>Low — CloudFuze's own API surface already covers this shape</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>AS2 — the retail and healthcare gate</h3>
+      <p>AS2 became the standard almost by decree: in the early 2000s Walmart mandated that its roughly 10,000 suppliers exchange EDI data over AS2, and other big retailers followed. That single decision is why "does it do AS2?" is a hard requirement in retail RFPs to this day. AS2 is <strong>push-only</strong> — your server has to be listening around the clock — and every message gets a signed <strong>MDN (Message Disposition Notification)</strong> back, in one of three modes: synchronous, asynchronous, or email-asynchronous. It's also popular in US healthcare specifically because it can be run in a HIPAA-compliant way, and virtually no ERP ships AS2 support natively, so buyers go looking for a dedicated AS2 gateway.</p>
+      <p class="src"><a href="https://www.jscape.com/blog/edi-transmission" target="_blank" rel="noopener">jscape.com/blog/edi-transmission</a>, <a href="https://ecosio.com/en/blog/the-4-most-common-edi-protocols/" target="_blank" rel="noopener">ecosio.com</a></p>
+
+      <h3>OFTP2 — Europe's automotive backbone</h3>
+      <p>OFTP2, released in 2007 by ODETTE (the European automotive standards body), updated the older OFTP for the internet era. Unlike AS2, it can push <em>and</em> pull within one session, uses digitally signed EERP/NERP receipts, supports resuming a transfer after an interruption instead of restarting it, and runs on a deliberately small command set (14 commands). To join the club you need your own OFTP2 server, real certificates, and an accredited <strong>Odette ID</strong> — or you outsource to an EDI service provider, which is what smaller shops do.</p>
+      <p class="src"><a href="https://www.i-effect.com/en/informationen/blog/oftp2-or-as2-which-edi-protocol-to-use" target="_blank" rel="noopener">i-effect.com</a>, <a href="https://ecosio.com/en/blog/the-4-most-common-edi-protocols/" target="_blank" rel="noopener">ecosio.com</a></p>
+
+      <div class="general-knowledge">
+        <span class="lbl">General knowledge — not sourced in this pass</span>
+        <strong>Connect:Direct</strong>, in practice, is a different animal from all of the above: it isn't an internet protocol you can implement from an RFC, it's IBM's own point-to-point software, run as a matched pair — a "PNODE" initiating and an "SNODE" receiving. Both companies install and run an actual Connect:Direct node; there's no way to "speak" it from outside without one. Its headline feature is checkpoint-restart: if a multi-gigabyte batch file breaks at 80%, it resumes at 80%, not zero — which is why banks running end-of-day settlement files over it have never had a reason to switch. This is also why it's the hardest of these seven to interoperate with as an outsider: CloudFuze can add AS2 or OFTP2 by implementing a spec and passing a certification round, but it cannot "add Connect:Direct" the same way — the realistic path is convincing the partner to run something else, not building a compatible node. <strong>PeSIT</strong> is the French equivalent of an OFTP-style protocol, still common in French banking and retail EDI; GoAnywhere publishes a short explainer on it (linked below) worth reading if you're scoping a French market push.
+      </div>
+    </section>
+
+    <!-- ============ STER ============ -->
+    <section class="dossier" id="ster">
+      <div class="sechead"><span class="tag">STER</span><h2>Inside IBM Sterling</h2></div>
+      <p>"IBM Sterling" is a family, not one product. <strong>Sterling B2B Integrator</strong> is the core integration engine; <strong>Sterling File Gateway (SFG)</strong> is the partner-facing routing layer built on top of it; <strong>Connect:Direct</strong> is the proprietary point-to-point mover described above; <strong>Secure Proxy</strong> is a DMZ gatekeeper so the real engine never faces the public internet directly. Below is what actually happens if you log into File Gateway and follow IBM's own tutorial step by step.</p>
+
+      <h3>Four logins, four jobs</h3>
+      <p>SFG ships with four pre-installed admin accounts, and the tutorial deliberately has you switch between them — separation of duties is baked into the product, not bolted on:</p>
+      <ul>
+        <li><code>fg_sysadmin</code> — System Administrator, owns the install itself</li>
+        <li><code>fg_architect</code> — Integration Architect, designs the routing rules (Communities, Templates)</li>
+        <li><code>fg_provisioner</code> — Route Provisioner, turns a template into a live route for a specific partner</li>
+        <li><code>fg_operator</code> — Operator, the day-to-day person who watches transfers and fixes failures</li>
+      </ul>
+      <p class="src"><a href="https://www.ibm.com/docs/SS3JSW_6.0.1/overview/overview/filegateway/SFGTutorial.html" target="_blank" rel="noopener">ibm.com/docs — SFG tutorial</a>, <a href="https://www.pragmaedge.com/sterling-file-gateway-tutorial/" target="_blank" rel="noopener">pragmaedge.com</a></p>
+
+      <h3>Onboarding a partner: Community → Group → Partner</h3>
+      <p>Nothing in SFG is "add a partner" as a single step. The Integration Architect first creates a <strong>Community</strong> (under <em>Participants → Communities</em>), which fixes how the whole relationship will behave: does the partner initiate the connection or does SFG listen for them, and over FTP or FTPS? Then a <strong>Group</strong> is created inside that community. Only after that does the Route Provisioner create the actual <strong>Partner</strong> record — with its login credentials, whether it's a producer or consumer of data, and its SSH/PGP settings — and attach it to the group.</p>
+
+      <h3>A "transfer" is really a Routing Channel Template</h3>
+      <p>There's no button labeled "create a transfer." Instead, under <em>Routes → Templates</em>, the architect defines a <strong>Routing Channel Template</strong>: a type (e.g. Static), a producer group and consumer group, the producer's mailbox path, a file-name pattern written as a regular expression (often just <code>.+</code>), and "provisioning facts" — variables like <code>myUserId</code> that get substituted per partner. The Route Provisioner then <em>instantiates</em> that template into a live <strong>Routing Channel</strong> by binding one specific producer partner to one specific consumer partner.</p>
+
+      <h3>How a file actually moves — and how it's monitored</h3>
+      <p>Partners don't log into the admin console at all. They use a separate self-service portal called <strong>myFileGateway</strong>: the producer partner logs in and drops a file into a mailbox, which fires the routing rule, and the consumer partner logs in separately to pull it out. On the ops side, the Operator's whole job is file-level search: find the file, drill into its event history and which routing channel handled it, and if something failed, hit <strong>"Replay From the Beginning of a Transfer"</strong> rather than re-doing anything by hand.</p>
+      <p class="src"><a href="https://www.ibm.com/docs/SS3JSW_6.0.1/overview/overview/filegateway/SFGTutorial.html" target="_blank" rel="noopener">ibm.com/docs — SFG tutorial</a></p>
+
+      <div class="general-knowledge">
+        <span class="lbl">General knowledge — not sourced in this pass</span>
+        <strong>Secure Proxy</strong> sits in the DMZ purely so that inbound SFTP/FTPS/AS2 sessions terminate at a hardened edge box, never at the real B2B Integrator server — conceptually the same job CloudFuze's own <code>tls-proxy</code> nginx profile does, just IBM-specific and heavier. Enterprises running the full Sterling stack typically treat B2B Integrator + File Gateway + Connect:Direct + Secure Proxy as one purchase, which is a large part of why Sterling deals run so large and so long to implement.
+      </div>
+    </section>
+
+    <!-- ============ MOVE ============ -->
+    <section class="dossier" id="move">
+      <div class="sechead"><span class="tag">MOVE</span><h2>Inside Progress MOVEit</h2></div>
+      <p>MOVEit is really two products sold together. <strong>MOVEit Transfer</strong> is the server partners connect to (the thing CloudFuze is most directly comparable to). <strong>MOVEit Automation</strong> is a separate Windows-based workflow engine that decides <em>when</em> and <em>how</em> files move, on three trigger models: scheduled, event-driven (something arrived), or on-demand.</p>
+
+      <h3>A "workflow" is a task built from five pieces</h3>
+      <p>In Automation's Web Admin console, every job is a <strong>task</strong> made of a Source, a Process, a Destination, a Schedule, and Next Actions — no scripting required. There are three task shapes: <strong>Traditional</strong> (linear pull → process → push), <strong>Advanced</strong> (adds IF branches, FOR-each-file loops, Send Email and Run Task steps), and <strong>Synchronization</strong> (one-way or two-way folder mirroring). All of it lives on one <em>TASKS</em> page with Run Now, export, and bulk actions.</p>
+      <p class="src"><a href="https://docs.ipswitch.com/MOVEit/Automation2017Plus/Help/Admin/en/MICEN_2017plus_SP1_MOVEitAutomationWebAdminHelp.pdf" target="_blank" rel="noopener">docs.ipswitch.com — Automation Web Admin Help (2017-era doc — verify against current release before quoting)</a></p>
+
+      <h3>Failure handling, in specifics</h3>
+      <p>Automation retries a failed transfer automatically, with a configurable count and timeout. It protects against grabbing a file mid-write with "partial file" detection and rename-after-upload. Integrity is checked via MD5 on plain FTP/SSH hosts, or SHA-1 with guaranteed delivery when the destination is a MOVEit Transfer host. Every transaction lands in a tamper-evident ODBC-backed log (MySQL, or Microsoft SQL Server recommended) that the built-in reporting reads from.</p>
+
+      <h3>Two gaps worth knowing precisely</h3>
+      <p>Two details stood out against CloudFuze's own feature list. First: <strong>the Automation Admin Web console has no SSO</strong> — an admin logs in with a local account, full stop. Second: SSH keys and Windows UNC credentials are protected with a <strong>FIPS 140-2 algorithm inside an encrypted XML file on the server</strong>, not a dedicated secrets vault with envelope encryption and external key sourcing the way CloudFuze's <code>CryptoVault</code> + <code>SecretResolver</code> work. Both are concrete, specific things CloudFuze already does better — worth saying plainly in competitive materials, not just implying.</p>
+      <p class="src"><a href="https://docs.ipswitch.com/MOVEit/Automation2017Plus/Help/Admin/en/MICEN_2017plus_SP1_MOVEitAutomationWebAdminHelp.pdf" target="_blank" rel="noopener">docs.ipswitch.com</a></p>
+
+      <div class="stamp" style="margin:1.6rem 0;">
+        <strong>Hands-on addendum —</strong> the vendor sites for IBM Sterling and GoAnywhere block automated fetching (403 responses even on their own tutorial/demo pages), but MOVEit's 3.4&nbsp;MB official Admin Help PDF downloaded and extracted cleanly to plain text. What follows is pulled verbatim from that PDF, page-cited — this is as close to "I clicked through it myself" as a document gets.
+      </div>
+
+      <h3>Creating a task, literally step by step</h3>
+      <p>Per the official guide, a <strong>Traditional</strong> task is built in exactly this order:</p>
+      <ol>
+        <li>Top menu → <code>TASKS</code> → <code>Add Task</code> (upper right) → specify a name, select <em>Traditional</em>, click <code>Add Task</code>. The task is created empty.</li>
+        <li>Click <code>Step</code> → select <em>Source</em>. The <strong>Add Source</strong> dialog opens — pick how to load the source file, pick a host, click <code>Next</code>.</li>
+        <li>The source's properties page opens; fill in its settings.</li>
+        <li>Click <code>Step</code> again to add more elements — at minimum the task needs a Source + Destination, or a Source + Process.</li>
+        <li>Click <code>Schedule</code> (a task with no schedule can only be run via "Run Now").</li>
+        <li>Optionally attach a <strong>Next Action</strong> — Send Email or Run Task.</li>
+      </ol>
+      <p>An <strong>Advanced</strong> task starts identically (<code>TASKS → Add Task</code>, name it, select <em>Advanced</em>) but then lets you drop in a <strong>File Loop (FOR)</strong> — repeat a set of steps once per downloaded file — and a <strong>Conditional Branch (IF)</strong> anywhere in the sequence, including nested inside a loop. Elements process top to bottom; anything indented under a FOR runs once per file, anything under an IF runs only if the condition holds.</p>
+      <p>A <strong>Synchronization</strong> task instead asks you to define <em>Folder A</em> and <em>Folder B</em> (each via its own "Add new sync folder" dialog with a host picker), starts as one-way (single arrow, A→B) until you flip it via <code>Actions → Task Settings → Sync row → Edit</code>, and — nice detail — lets you <code>Actions → View Sync Preview</code> before committing, to see exactly what the sync run would do first.</p>
+
+      <h3>Adding a host/connector</h3>
+      <p>Every source or destination has to point at a <strong>Host</strong> defined up front: <code>HOSTS</code> (top nav) → <code>Add Host</code> → pick a type (Local filesystem, UNC Share, MOVEit Transfer Server, FTP/FTPS, SSH/SFTP, POP3, SMTP, or AS1/AS2/AS3 trading-partner) → fill the type-specific fields → <code>Add Host</code>. Editing an existing host exposes up to a dozen tabbed categories depending on type: General, Uploads, Limits, Timeouts, Security, Proxy Server, Advanced, Directory List Parsing, Additional Commands, Firewall, Decryption, SMTP, Email MDN, Retry, Miscellaneous. Adding a host also runs a live <code>Test</code> connection check before you save.</p>
+
+      <div class="tablewrap">
+        <table>
+          <caption>The exact AS2 host field schema (MOVEit Automation Admin Help, p.338–340) — a usable spec for CloudFuze's own AS2 connector</caption>
+          <thead><tr><th>Section</th><th>Field</th><th>What it configures</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="3">My Organization</td><td><code>Organization Name</code></td><td>Your identity within the AS2 exchange</td></tr>
+            <tr><td><code>Signing Certificate</code></td><td>Full public/private cert used to sign &amp; decrypt your outbound messages</td></tr>
+            <tr><td><code>Signature Algorithm</code></td><td>SHA-1, MD5, SHA-224, SHA-256, SHA-384, or SHA-512</td></tr>
+            <tr><td rowspan="4">Partner Organization</td><td><code>Partner Name</code> / <code>Certificate</code></td><td>Partner's identity and public cert (encrypts to them, verifies their signature)</td></tr>
+            <tr><td><code>Encryption Algorithm</code></td><td>3DES, DES, AES, AES‑CBC‑192, AES‑CBC‑256, RC2, or None</td></tr>
+            <tr><td><code>Compression Algorithm</code></td><td>ZLib or None</td></tr>
+            <tr><td><code>EDI Data Type</code></td><td>MIME tag on the outbound message — <code>application/edi-x12</code> (default) or <code>application/octet-stream</code></td></tr>
+            <tr><td rowspan="4">Transport</td><td><code>Partner URL</code></td><td>Partner's HTTP(S) endpoint MOVEit posts AS2 messages to</td></tr>
+            <tr><td><code>Ignore SSL Certificate Errors</code></td><td>Escape hatch for a partner with a broken/self-signed cert</td></tr>
+            <tr><td><code>Use HTTP Authentication</code> / <code>Username/Password</code></td><td>Basic auth layered under the AS2 exchange itself</td></tr>
+            <tr><td><code>Client Certificate</code></td><td>SSL client cert presented when connecting to the partner</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">This is the concrete engineering checklist for CloudFuze's own AS2 roadmap item: a per-partner signing cert + signature algorithm, a partner cert + encryption/compression algorithm choice, an EDI-type tag, and the transport/auth settings above. Anything shipping less than this won't feel complete next to what buyers already expect from MOVEit or GoAnywhere.</p>
+      <p class="src"><a href="https://docs.ipswitch.com/MOVEit/Automation2017Plus/Help/Admin/en/MICEN_2017plus_SP1_MOVEitAutomationWebAdminHelp.pdf" target="_blank" rel="noopener">docs.ipswitch.com — Automation Web Admin Help (fetched &amp; extracted directly, pp. 21–24, 32–36, 338–340)</a></p>
+
+      <div class="tablewrap">
+        <table>
+          <caption>MOVEit at a glance</caption>
+          <tbody>
+            <tr><th>Connectors</th><td>FTP, FTPS (explicit &amp; implicit), SFTP, local disk, UNC shares, POP3/SMTP, HTTP(S), other MOVEit Transfer servers, AS1/AS2/AS3 — no native S3 or Azure Blob host type in the 2017-era doc</td></tr>
+            <tr><th>Retention</th><td>~40 days of activity/file data, 200 days of audit logs by default</td></tr>
+            <tr><th>Scale (as documented)</th><td>Up to 100 tasks executing simultaneously; up to 5,000 configured tasks</td></tr>
+            <tr><th>APIs</th><td>REST (with a Swagger UI), Java, and .NET — documented every year through the 2026 release</td></tr>
+            <tr><th>Deployment</th><td>On‑prem, Azure, AWS, VMware, Hyper‑V, KVM, multi‑node "Web Farm," or MOVEit Cloud (SaaS)</td></tr>
+            <tr><th>Multi‑tenancy</th><td>An "Organizations" page in the SysAdmin dashboard — app‑layer separation, not database row‑level security</td></tr>
+            <tr><th>AS2 certification</th><td>Drummond‑certified for all three MDN modes historically; notably absent from Drummond's <em>current</em> AS2 list — worth confirming directly before repeating</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="src"><a href="https://docs.progress.com/category/moveit-documentation" target="_blank" rel="noopener">docs.progress.com</a>, <a href="https://www.drummondgroup.com/certified-products/b2b-interoperability/" target="_blank" rel="noopener">drummondgroup.com</a></p>
+    </section>
+
+    <!-- ============ GOAW ============ -->
+    <section class="dossier" id="goaw">
+      <div class="sechead"><span class="tag">GOAW</span><h2>Inside Fortra GoAnywhere</h2></div>
+      <p>GoAnywhere's whole admin experience lives in one browser-based HTML5 console, organized around Dashboards, User Management, Workflows, File Transfer Services, and Reporting — no separate portal the way Sterling splits admin console from myFileGateway.</p>
+
+      <h3>Two kinds of users, one template system</h3>
+      <p><strong>Admin Users</strong> run the product and are scoped by <strong>Admin Roles</strong> — one person's role might let them create Projects, another's might only permit viewing audit logs. <strong>Web Users</strong> are the actual trading partners, customers, or employees exchanging files, over FTP, FTPS, SFTP, AS2, or HTTPS — and templates auto-provision a new Web User's settings and permissions so onboarding a partner doesn't mean configuring everything from scratch each time.</p>
+      <p class="src"><a href="https://www.goanywhere.com/resources/training/getting-started-goanywhere-mft" target="_blank" rel="noopener">goanywhere.com — getting started</a></p>
+
+      <h3>Building and running a workflow</h3>
+      <p>Workflows are called <strong>Projects</strong>, built in the <strong>Advanced Workflows</strong> module by drag-and-drop rather than scripting — you can try this yourself in Fortra's live interactive demo, linked in the learning path below. A Project can be launched four ways: a <strong>Scheduler</strong>, a folder <strong>Monitor</strong>, a <strong>Trigger</strong> event, or someone submitting a web-based <strong>Secure Form</strong>. Once running, jobs sit in a <strong>Job Queue Manager</strong> that prioritizes and groups them, visible across Queued / Active / Completed views. <strong>Resources</strong> abstract away the actual server connection details, so the person designing a Project never sees the real credentials.</p>
+      <p class="src"><a href="https://www.goanywhere.com/products/goanywhere-mft/interactive-demo" target="_blank" rel="noopener">goanywhere.com — interactive demo</a>, <a href="https://www.goanywhere.com/resources/training/getting-started-goanywhere-mft" target="_blank" rel="noopener">goanywhere.com — getting started</a></p>
+
+      <h3>Security posture &amp; deployment</h3>
+      <p>GoAnywhere supports external auth against Active Directory, generic LDAP, or IBM i, SAML SSO for the HTTPS Web Client, syslog/SIEM export, an Encryption menu with dedicated OpenPGP and SSH Key Managers, folder-level encryption at rest, and a FIPS 140-3 compliance mode. It runs almost anywhere — Windows, Linux, Docker, Azure, EC2, IBM i, VMware, AIX/UNIX — plus a SaaS edition called MFTaaS, with an optional Gateway component acting as a reverse/forward proxy. Fortra also sells a <strong>Secure ICAP Gateway</strong> add-on that scans transferred files for malware and inspects/redacts sensitive content — content inspection as an upsell, not a base feature.</p>
+      <p class="src"><a href="https://www.goanywhere.com/resources/training/getting-started-goanywhere-mft" target="_blank" rel="noopener">goanywhere.com</a></p>
+
+      <h3>How it's priced</h3>
+      <p>Fortra doesn't publish list prices — it's quote-only. Licensing is mostly per module/server-instance rather than per-user, with two named exceptions: Secure Mail and GoDrive are priced per user, and the AS2 client/server module is priced by number of trading partners. The standard license places no limit on how many external SFTP/FTP/HTTP(S)/SMTP/POP3 servers you connect to. A Disaster Recovery instance needs its own (discounted) license.</p>
+      <p class="src"><a href="https://www.goanywhere.com/pricing" target="_blank" rel="noopener">goanywhere.com/pricing</a></p>
+    </section>
+
+    <!-- ============ COUCH ============ -->
+    <section class="dossier" id="couch">
+      <div class="sechead"><span class="tag">COUCH</span><h2>Couchdrop</h2></div>
+      <p>Worth correcting up front: this guide originally described Couchdrop as a "lighter, point-solution" gateway, flagged as unverified background guessing. Having now actually fetched its site directly, that undersold it — Couchdrop is a real, more complete MFT competitor than assumed, and it targets the same regulated verticals CloudFuze does: <em>financial services, healthcare, supply chain, and logistics</em>. It's also the one product in this guide with a genuinely frictionless trial — 14 days, no credit card, instant self-serve signup — which is itself a competitive data point (see GAP).</p>
+
+      <h3>What it actually does</h3>
+      <p>Couchdrop's pitch is "send, receive, and automate secure file transfers in one simple platform" — modernizing legacy MFT without code or infrastructure to run. It speaks <strong>SFTP/FTP</strong> as its primary protocols, plus <strong>AS2</strong> for EDI, inbound webhooks, and mailbox-based (email) file receipt. Workflows are built no-code: multi-step transfer pipelines with scheduling, orchestration, and per-step actions like compression, encryption, and data transformation.</p>
+
+      <h3>The architectural difference that actually matters</h3>
+      <p>Unlike Sterling, MOVEit, GoAnywhere, or CloudFuze itself — all of which stage a file in their own storage/mailbox as part of the pipeline — Couchdrop's marketing claims files <strong>stream directly between source and destination without a temporary storage layer</strong>, and that customer data lives in the customer's own connected storage (S3, SharePoint, Google Drive, etc.), not Couchdrop's. If accurate, that's a real, structural security argument: an MFT that never holds your files at rest has a meaningfully smaller breach surface than one that does — directly relevant given the whole INCID section above is about breaches of products that <em>did</em> hold files at rest.</p>
+
+      <h3>Connector catalog — the real headline number</h3>
+      <p>Couchdrop connects to <strong>50+ backends</strong>: the expected cloud storage set (SharePoint, Google Drive, Dropbox, OneDrive, Box, Egnyte, S3, Azure Blob, Google Cloud Storage, DigitalOcean Spaces, Wasabi, Backblaze B2, iDrive), enterprise systems (NetSuite, Workday), and generic SFTP/FTP/Windows/macOS servers plus custom API connectors. CloudFuze currently connects to one family (S3/MinIO) — this is the single widest gap found anywhere in this research, wider than any protocol gap.</p>
+
+      <h3>Security &amp; compliance — with a real certification, not just a claim</h3>
+      <ul>
+        <li><strong>SOC 2 Type II</strong> — "certified, with annual third-party SOC 2 audits." Type II specifically means audited over a period of operation, not just a point-in-time design review — a meaningfully stronger claim than Type I.</li>
+        <li><strong>HIPAA</strong>-ready with a signable BAA and dedicated infrastructure; <strong>GDPR</strong> audited compliance with a Data Processing Agreement available.</li>
+        <li>TLS 1.2+ in transit; at rest, optional hosted storage uses AES-256 via S3 SSE-C with client-side key encryption, plus full-disk encryption on Couchdrop's own servers.</li>
+        <li><strong>Transfer Shield</strong> — a built-in DLP feature to "scan, classify, filter, and scrub" data in flight (no deeper technical detail published) — the same content-inspection idea as GoAnywhere's ICAP Gateway add-on, except bundled rather than sold separately.</li>
+        <li>Access control down to user/group/account level, plus per-protocol and per-folder restrictions; 2FA/MFA, SSO, and <strong>SCIM</strong> provisioning.</li>
+        <li>Continuous vulnerability scanning (via the Aikido platform) and regular independent penetration testing, published in a live Trust Center with real-time control status — a working example of exactly the kind of public trust page CloudFuze's own Trust Center is building toward.</li>
+      </ul>
+      <p class="src"><a href="https://www.couchdrop.io/" target="_blank" rel="noopener">couchdrop.io</a>, <a href="https://www.couchdrop.io/security" target="_blank" rel="noopener">couchdrop.io/security</a>, <a href="https://www.couchdrop.io/pricing" target="_blank" rel="noopener">couchdrop.io/pricing</a> — fetched directly for this section</p>
+    </section>
+
+    <!-- ============ OTHER ============ -->
+    <section class="dossier" id="other">
+      <div class="sechead"><span class="tag">OTHER</span><h2>Axway, Kiteworks &amp; the modern upstarts</h2></div>
+      <p>This pass's searches surfaced these vendors mostly through their own compliance/positioning content rather than admin-console walkthroughs, so treat the specifics here as lighter than the three deep dives above.</p>
+
+      <h3>Kiteworks</h3>
+      <p>Kiteworks positions itself around governance and content risk more than raw protocol coverage — its own published buyer's guide and compliance guide both frame MFT primarily as a compliance and audit-logging problem, which tracks with its market reputation as leaning toward the "content firewall" / sensitive-content-governance end of MFT rather than high-volume EDI transport.</p>
+      <p class="src"><a href="https://www.kiteworks.com/managed-file-transfer/mft-compliance-complete-guide/" target="_blank" rel="noopener">kiteworks.com — compliance guide</a>, <a href="https://www.kiteworks.com/managed-file-transfer/managed-file-transfer-software-vendors/" target="_blank" rel="noopener">kiteworks.com — buyer's guide</a></p>
+
+      <h3>Files.com &amp; SFTP To Go</h3>
+      <p>Files.com markets itself as a cloud-native MFT and file-sharing platform and was independently rated <strong>#1 Easiest to Use</strong> in G2's November 2025 MFT category snapshot (see the Market section) — a real, sourced signal that the modern-upstart UX bar is high. SFTP To Go, a lightweight cloud-SFTP vendor, has completed a full <strong>SOC 2</strong> audit against the AICPA Trust Services Criteria — concrete proof that even small players now treat SOC 2 as table stakes, not a nice-to-have.</p>
+      <p class="src"><a href="https://www.files.com/" target="_blank" rel="noopener">files.com</a>, <a href="https://sftptogo.com/blog/managed-file-transfer-mft-software-compliance/" target="_blank" rel="noopener">sftptogo.com</a></p>
+
+      <div class="general-knowledge">
+        <span class="lbl">General knowledge — not sourced in this pass</span>
+        <strong>Axway</strong> traces back to Cyclone Commerce and is one of the oldest names in B2B integration; its MFT-relevant products are <strong>Axway B2Bi</strong> (integration/EDI engine, Sterling B2B Integrator's closest direct rival) and <strong>SecureTransport</strong> (the MFT gateway proper). It shows up on Drummond's AS2-certified list alongside Sterling and GoAnywhere, so it's a serious, protocol-complete competitor even though this research pass didn't get inside its console. Verify independently before citing specifics in a competitive deck. (Couchdrop now has its own properly-researched section above — COUCH.)
+      </div>
+    </section>
+
+    <!-- ============ INCIDENT ============ -->
+    <section class="dossier wide" id="incident">
+      <div class="sechead"><span class="tag">INCID</span><h2>The 2023 breaches</h2></div>
+      <div class="wide-inner"><p>Two breaches in one year reset what every MFT buyer now demands, and they followed the same actor's playbook a third time. Understanding the technical detail — not just "there was a breach" — is what makes CloudFuze's audit log and hardening claims land as substance instead of marketing.</p></div>
+
+      <div class="tablewrap">
+        <table>
+          <caption>Side-by-side technical comparison</caption>
+          <thead><tr><th></th><th>MOVEit Transfer</th><th>GoAnywhere MFT</th></tr></thead>
+          <tbody>
+            <tr><th>CVE</th><td><code>CVE-2023-34362</code> (plus <code>-35036</code>, <code>-35708</code>, <code>-36934</code> in following weeks)</td><td><code>CVE-2023-0669</code></td></tr>
+            <tr><th>Root cause</th><td>Unauthenticated SQL injection into the backend MSSQL database</td><td>Insecure Java deserialization behind a hardcoded AES-256 key in the license servlet</td></tr>
+            <tr><th>How it was used</th><td>Injected SQL to plant a web shell ("LEMURLOOT," disguised as <code>human2.aspx</code>), authenticated via a random header, used to read files and manipulate user records</td><td>Malicious serialized Java objects (e.g. via ysoserial) sent to <code>/lic/accept/</code> on the admin port (default 8000) for remote code execution</td></tr>
+            <tr><th>Attacker</th><td>Cl0p ransomware gang (TA505)</td><td>Cl0p ransomware gang (TA505)</td></tr>
+            <tr><th>Disclosed / patched</th><td>Exploited from ~May 27, 2023; disclosed May 31, 2023; added to CISA's Known Exploited Vulnerabilities list June 2, 2023</td><td>Patched in version 7.1.2, released February 13, 2023</td></tr>
+            <tr><th>Exposure</th><td>At least 2,674 internet-exposed MOVEit servers found by Palo Alto Xpanse (excluding cloud instances)</td><td>Over 1,000 instances reachable from the internet; ~100 admin pages on port 8000 found via Shodan</td></tr>
+            <tr><th>Reported impact</th><td>One of the largest mass-exploitation campaigns of 2023</td><td>Cl0p claimed ~130 affected organizations over 10 days; breach reported as contained to the GoAnywhere platform with no observed lateral movement</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="src"><a href="https://unit42.paloaltonetworks.com/threat-brief-moveit-cve-2023-34362/" target="_blank" rel="noopener">unit42.paloaltonetworks.com</a>, <a href="https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a" target="_blank" rel="noopener">cisa.gov/aa23-158a</a>, <a href="https://www.rapid7.com/blog/post/ra-cve-2023-0669-analysis/" target="_blank" rel="noopener">rapid7.com</a>, <a href="https://www.sentinelone.com/blog/cve-2023-0669/" target="_blank" rel="noopener">sentinelone.com</a></p>
+
+      <div class="wide-inner">
+      <p><strong>Neither was a one-off.</strong> CISA's own advisory places both inside a repeated Cl0p/TA505 pattern of zero-day attacks specifically against managed file transfer products — Accellion FTA in 2020–2021, then GoAnywhere in early 2023, then MOVEit months later. MFT products are a standing target precisely <em>because</em> they sit at the edge of the network holding sensitive files by design; that's not an incidental risk, it's the job description. One more thing worth a critical-thinking note: SentinelOne rated the GoAnywhere CVE a CVSS 7.2 ("High"), while other trackers called it 9.8 ("Critical") — a real discrepancy across sources that's worth resolving before quoting a severity number externally.</p>
+      <p class="src"><a href="https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a" target="_blank" rel="noopener">cisa.gov/aa23-158a</a></p>
+      </div>
+    </section>
+
+    <!-- ============ TRUST ============ -->
+    <section class="dossier wide" id="trust">
+      <div class="sechead"><span class="tag">TRUST</span><h2>Compliance buyers actually demand</h2></div>
+      <div class="tablewrap">
+        <table>
+          <caption>Frameworks, translated</caption>
+          <thead><tr><th>Framework</th><th>What it actually requires</th><th>Why an MFT buyer cares</th></tr></thead>
+          <tbody>
+            <tr><td><span class="chip accent">SOC 2</span></td><td>Independent audit against four Trust Services Criteria: Security, Availability, Processing Integrity, Confidentiality &amp; Privacy</td><td>Now baseline even for small cloud MFT vendors — SFTP To Go, a lightweight upstart, already holds it</td></tr>
+            <tr><td><span class="chip accent">GDPR</span></td><td>Personal-data breaches must be reported to authorities within <strong>72 hours</strong></td><td>Forces real breach-detection and audit-log capability, not just encryption</td></tr>
+            <tr><td><span class="chip accent">HIPAA</span></td><td>Technical safeguards (45 CFR §164.312): TLS 1.2+ in transit, MFA/SSO for all users, full audit logs for ePHI transfers</td><td>Encryption of ePHI in transit is technically "addressable" not strictly mandatory — but every vendor implements it anyway</td></tr>
+            <tr><td><span class="chip accent">FedRAMP / DFARS</span></td><td>Cloud services touching US defense data must meet FedRAMP Moderate-equivalent controls (DFARS 252.204-7012)</td><td>A hard gate — no authorization, no defense-supply-chain sale, full stop</td></tr>
+            <tr><td><span class="chip accent">SOX §404</span></td><td>Verifiable, tamper-evident audit trails for anything touching financial reporting</td><td>Directly validates a hash-chained log as a feature, not a nice-to-have</td></tr>
+            <tr><td><span class="chip accent">FIPS 140-3</span></td><td><em>Validated</em> means NIST's CMVP actually certified the crypto module — merely "using AES-256" is not the same claim</td><td>Buyers who know the difference will ask which one you mean; don't blur it</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="src"><a href="https://sftptogo.com/blog/managed-file-transfer-mft-software-compliance/" target="_blank" rel="noopener">sftptogo.com</a>, <a href="https://www.kiteworks.com/managed-file-transfer/mft-compliance-complete-guide/" target="_blank" rel="noopener">kiteworks.com</a></p>
+
+      <div class="wide-inner">
+      <p>Two GRC expectations sourced in this pass line up almost exactly with what CloudFuze already ships: buyers expect audit logs to be <strong>immutable and exportable to a SIEM via Syslog</strong>, specifically so an insider can't quietly edit the record — which is a direct description of CloudFuze's hash-chained log plus cursor-based SIEM export. The gap is elsewhere: CMMC and NIST 800-171 (defense-adjacent contractors), ISO 27001, and PCI DSS all came up as standard items on buyer checklists in this research, none of which CloudFuze currently holds — its own Trust Center already, correctly, flags those badges as roadmap goals rather than earned certifications.</p>
+      </div>
+    </section>
+
+    <!-- ============ MARKET ============ -->
+    <section class="dossier wide" id="market">
+      <div class="sechead"><span class="tag">MARKET</span><h2>How enterprises actually buy this</h2></div>
+
+      <div class="tablewrap">
+        <table>
+          <caption>G2 Managed File Transfer category — snapshot, November 2025 (51 listed products)</caption>
+          <thead><tr><th>Product</th><th class="num">Reviews</th><th class="num">Rating</th><th>Notable standing</th></tr></thead>
+          <tbody>
+            <tr><td>Progress MOVEit</td><td class="num">512</td><td class="num">4.4</td><td>Most-reviewed; 2nd Easiest to Use</td></tr>
+            <tr><td>Cleo Integration Cloud</td><td class="num">533</td><td class="num">4.4</td><td>Highest review volume overall</td></tr>
+            <tr><td>Fortra GoAnywhere MFT</td><td class="num">324</td><td class="num">4.6</td><td>Category Leader &amp; Top Trending; 3rd Easiest to Use</td></tr>
+            <tr><td>Files.com</td><td class="num">253</td><td class="num">4.6</td><td>#1 Easiest to Use</td></tr>
+            <tr><td>AWS Transfer Family</td><td class="num">169</td><td class="num">4.3</td><td>Reviewers cite high cost at volume</td></tr>
+            <tr><td>Axway MFT</td><td class="num">89</td><td class="num">4.5</td><td>—</td></tr>
+            <tr><td>JSCAPE MFT Server</td><td class="num">95</td><td class="num">4.5</td><td>—</td></tr>
+            <tr><td>IBM Sterling B2B Integrator</td><td class="num">41</td><td class="num">4.2</td><td>Lowest rating and smallest review count among the majors</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="src"><a href="https://www.g2.com/categories/managed-file-transfer-mft" target="_blank" rel="noopener">g2.com/categories/managed-file-transfer-mft</a></p>
+
+      <h3>What the RFP actually checks for</h3>
+      <p>G2's own category inclusion criteria are, in effect, the buyer's checklist: multiple secure protocols (SFTP/FTPS/HTTPS/AS2/REST), automation via scheduling/triggers/workflows, real-time monitoring with failure alerts, immutable audit logs, enterprise identity integration (SSO/AD/LDAP/SCIM), compliance support (GDPR/HIPAA/PCI-DSS/SOX), and high availability.</p>
+
+      <h3>Where incumbents are actually weak, in the reviewers' own words</h3>
+      <p>Aggregated G2 reviews point to specific, exploitable pain: GoAnywhere users cite <strong>complexity</strong> (51 mentions), <strong>difficult learning curve</strong> (31), and <strong>poor customer support</strong> (18); MOVEit reviewers cite bugs, inconsistent updates, and security issues (12 mentions) — the last one landing awkwardly given 2023. On PeerSpot, GoAnywhere ranks #1 in the category (8.5 avg, 120 reviews) against MOVEit at #4 (8.4 avg, 18 reviews), though both show declining year-over-year mindshare as of PeerSpot's July 2026 snapshot — a market reviewers describe as being chipped away by newer entrants.</p>
+      <p class="src"><a href="https://www.g2.com/categories/managed-file-transfer-mft" target="_blank" rel="noopener">g2.com</a>, <a href="https://www.peerspot.com/products/comparisons/goanywhere-mft_vs_moveit" target="_blank" rel="noopener">peerspot.com</a></p>
+
+      <h3>How it's priced, and how long a deal takes</h3>
+      <p>Per G2, pricing spans free tools up to enterprise contracts worth hundreds of thousands of dollars; on-premises products are typically sold as a perpetual license plus annual maintenance, cloud MFT as a subscription. G2's own buyer advice — shortlist 3–5 vendors, run an identical-use-case demo across all of them, pilot before committing — describes exactly the sales motion CloudFuze should expect to be evaluated through.</p>
+      <p class="src"><a href="https://www.g2.com/categories/managed-file-transfer-mft" target="_blank" rel="noopener">g2.com</a></p>
+    </section>
+
+    <!-- ============ GAP ============ -->
+    <section class="dossier wide" id="gap">
+      <div class="sechead"><span class="tag">GAP</span><h2>Where this leaves CloudFuze MFT</h2></div>
+
+      <h3>Already holding its own</h3>
+      <div class="tablewrap">
+        <table>
+          <caption>CloudFuze features checked against what this research found competitors do</caption>
+          <thead><tr><th>CloudFuze has</th><th>How it stacks up</th></tr></thead>
+          <tbody>
+            <tr><td>OIDC SSO + TOTP MFA</td><td><span class="chip good">ahead</span> — MOVEit Automation's own admin console has <em>no SSO at all</em>, sourced directly from its admin guide</td></tr>
+            <tr><td>AES-256-GCM vault + <code>SecretResolver</code> (file:/env: refs)</td><td><span class="chip good">ahead</span> — MOVEit instead keeps SSH/UNC creds in an encrypted XML file on the server, not a dedicated vault with external key sourcing</td></tr>
+            <tr><td>Hash-chained, tamper-evident audit log + SIEM export</td><td><span class="chip good">on par</span> — matches exactly what GRC buyers were sourced as demanding: immutable, Syslog-exportable logs</td></tr>
+            <tr><td>Postgres row-level security multi-tenancy</td><td><span class="chip good">ahead in depth</span> — MOVEit's "Organizations" model and most competitors isolate tenants at the application layer; DB-enforced RLS is a stronger, harder-to-bypass guarantee</td></tr>
+            <tr><td>Temporal durable workflows (retry, resume-after-crash)</td><td><span class="chip neutral">on par</span> — comparable in outcome to MOVEit's configurable retry and GoAnywhere's Job Queue Manager</td></tr>
+            <tr><td>AI Copilot (NL workflow drafting, grounded audit Q&amp;A)</td><td><span class="chip good">ahead</span> — none of Sterling, MOVEit, or GoAnywhere's sourced material mentions an AI feature at all; genuine differentiation, while it lasts</td></tr>
+            <tr><td>MOVEit/GoAnywhere config import</td><td><span class="chip neutral">partial</span> — real for MOVEit/GoAnywhere switchers; does nothing for a Sterling shop, whose config model (Communities/Templates/Routing Channels) has no equivalent to import from</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Gaps, ranked by what to fix first</h3>
+      <ol>
+        <li><strong>Connector breadth</strong> — the single widest gap this research found, wider than any protocol. Couchdrop connects to 50+ storage/enterprise backends; CloudFuze connects to one family (S3/MinIO). Every one of SharePoint, Google Drive, OneDrive, Box, and Azure Blob that CloudFuze can't reach is a deal Couchdrop or Files.com can win on connector breadth alone before protocols even come up.</li>
+        <li><strong>FTPS</strong> — cheapest protocol gap to close (TLS-wrapped FTP, mature libraries) and explicitly named in buyer checklists; there's no reason this isn't next.</li>
+        <li><strong>AS2 with MDN receipts</strong> — the retail/healthcare gate, and now confirmed as something a lightweight upstart (Couchdrop) already ships, not just the enterprise incumbents. Scope this as two projects, not one: implementing the protocol, and then a Drummond interoperability certification round (a recurring, scheduled, quarterly event you have to plan lead time for — see the certified-vendor list linked below). Shipping AS2 without pursuing certification will read as unfinished to a serious retail buyer.</li>
+        <li><strong>Certifications, starting with SOC 2 Type II</strong> — Couchdrop's Trust Center is the sharpest wake-up call in this whole research pass: it holds an actual, annually-audited <strong>SOC 2 Type II</strong>, not a Type I or a roadmap goal. CloudFuze's own Trust Center currently — correctly — labels its badges as goals. That gap is now closeable by a competitor a fraction of CloudFuze's apparent size, which raises the urgency here more than any other single finding.</li>
+        <li><strong>OFTP2</strong> — lower priority unless there's an actual automotive or EU-public-sector prospect; the cost (your own OFTP2 server, certificates, an Odette ID) only pays off against a real deal.</li>
+        <li><strong>Connect:Direct interoperability</strong> — the honest answer, unchanged from earlier in this conversation: this is not a protocol CloudFuze can "add." A bank on Connect:Direct requires both sides to agree to move off it. Budget this as a sales/partnership problem, not an engineering one.</li>
+      </ol>
+      <p class="note">One structural idea worth stealing regardless of priority order: Couchdrop's claim of streaming files directly between source and destination without staging them in its own storage is a genuine architectural alternative to CloudFuze's current stage-in-S3/MinIO-then-forward pipeline. Worth at least a design conversation — less data at rest is a smaller breach surface, and "breach surface" is the entire thesis of the INCID section above.</p>
+
+      <h3>Two product-shape lessons worth stealing</h3>
+      <p>GoAnywhere's Advanced Workflows module is drag-and-drop, not scripted — confirm CloudFuze's own Workflows screen holds to that same no-code bar as it grows, since a visual builder is explicitly what buyers compare it against. Separately, Sterling's four-persona admin model (sysadmin/architect/provisioner/operator) is heavier than CloudFuze needs today, but it signals that enterprise buyers do expect separation-of-duties admin roles eventually — worth keeping in mind as RBAC granularity comes up in a future release, without copying Sterling's full weight.</p>
+
+      <h3>A messaging angle, used carefully</h3>
+      <p>The reviewers' own complaints — GoAnywhere's complexity and support, MOVEit's bugs and "security issues" — are fair game to contrast against a clean React console and a from-scratch security design. But CloudFuze's own Trust Center already gets the discipline right here: badges and a "zero-breach record" are marketing until the actual third-party audit exists. Given that Cl0p hit two MFT products in one year specifically <em>because</em> they're MFT products, an unearned claim here is the one mistake this whole research pass argues hardest against making.</p>
+    </section>
+
+    <!-- ============ STUDY ============ -->
+    <section class="dossier wide" id="study">
+      <div class="sechead"><span class="tag">STUDY</span><h2>The learning path</h2></div>
+      <div class="wide-inner">
+      <p>Honest finding first: this niche doesn't have much good free video content. The one YouTube result this research turned up for hands-on Sterling training was checked and should be <strong>avoided</strong> — see below for why, and for how to spot the same pattern yourself. The good news is the vendors' own free trials and interactive demos are genuinely better hands-on material than most tutorial videos would be anyway.</p>
+      <p class="note">One more honest data point: attempting to re-fetch IBM's and GoAnywhere's tutorial/demo pages directly (to go deeper than this research pass) hit HTTP 403 on both — their own marketing sites actively block automated fetching. MOVEit's admin-help PDF, by contrast, downloaded and extracted cleanly, which is why the MOVE section above has console-exact detail (task wizards, host field lists) that STER and GOAW don't. That asymmetry is itself informative: it's not that Sterling/GoAnywhere are less documented, it's that their sites are harder to reach programmatically than a static PDF.</p>
+      </div>
+
+      <h3>Do these first — real hands-on access, no video needed</h3>
+      <ul class="reslist">
+        <li>
+          <span class="rtitle"><a href="https://www.goanywhere.com/products/goanywhere-mft/interactive-demo" target="_blank" rel="noopener">GoAnywhere MFT — Interactive Demo</a></span>
+          <span class="rmeta">Fortra · official · click-through, no signup</span>
+          <p class="rdesc">The closest thing to actually sitting in a Sterling/GoAnywhere demo that's freely available. Covers Advanced Workflows (the drag-and-drop builder) and Secure Forms. Start here.</p>
+        </li>
+        <li>
+          <span class="rtitle"><a href="https://www.goanywhere.com/trial" target="_blank" rel="noopener">GoAnywhere MFT — 30-Day Free Trial</a></span>
+          <span class="rmeta">Fortra · official · self-install sandbox</span>
+          <p class="rdesc">A full, self-installed copy you can actually configure — build a Project, wire up a Scheduler, watch the Job Queue for real.</p>
+        </li>
+        <li>
+          <span class="rtitle"><a href="https://www.progress.com/moveit/free-trials" target="_blank" rel="noopener">MOVEit — Free Trials (Transfer, Cloud, Automation)</a></span>
+          <span class="rmeta">Progress · official</span>
+          <p class="rdesc">Three separate trials — try MOVEit Automation specifically to see the task-based (Source/Process/Destination) workflow model firsthand.</p>
+        </li>
+        <li>
+          <span class="rtitle"><a href="https://www.ibm.com/docs/SS3JSW_6.0.1/overview/overview/filegateway/SFGTutorial.html" target="_blank" rel="noopener">IBM Sterling File Gateway — Official Tutorial</a></span>
+          <span class="rmeta">IBM · official docs · step-by-step</span>
+          <p class="rdesc">Sterling isn't self-serve trial software the way GoAnywhere/MOVEit are, so this written, exact-menu-path tutorial is the next best thing — it's what the STER section above was built from.</p>
+        </li>
+        <li>
+          <span class="rtitle"><a href="https://www.pragmaedge.com/sterling-file-gateway-tutorial/" target="_blank" rel="noopener">Sterling File Gateway Tutorial</a></span>
+          <span class="rmeta">Pragma Edge (IBM implementation partner)</span>
+          <p class="rdesc">A second, independently-written walkthrough of the same product — useful for cross-checking IBM's own phrasing against a practitioner's.</p>
+        </li>
+      </ul>
+
+      <h3>Reference &amp; documentation</h3>
+      <ul class="reslist">
+        <li><span class="rtitle"><a href="https://docs.ipswitch.com/MOVEit/Automation2017Plus/Help/Admin/en/MICEN_2017plus_SP1_MOVEitAutomationWebAdminHelp.pdf" target="_blank" rel="noopener">MOVEit Automation Web Admin Help (PDF)</a></span><span class="rmeta">Progress · official</span><p class="rdesc">The single most detailed admin-console document found in this pass — this is where the task model and connector list came from.</p></li>
+        <li><span class="rtitle"><a href="https://docs.progress.com/category/moveit-documentation" target="_blank" rel="noopener">MOVEit Documentation Hub</a></span><span class="rmeta">Progress · official</span><p class="rdesc">Current, versioned docs through the 2026 release — use this to confirm anything the 2017-era Automation PDF might have aged out of.</p></li>
+        <li><span class="rtitle"><a href="https://www.goanywhere.com/blog/what-is-pesit" target="_blank" rel="noopener">What Is PeSIT?</a></span><span class="rmeta">Fortra / GoAnywhere blog</span><p class="rdesc">Short, clear explainer if French banking/EDI ever becomes a target market.</p></li>
+        <li><span class="rtitle"><a href="https://www.drummondgroup.com/certified-products/b2b-interoperability/" target="_blank" rel="noopener">Drummond Group — Certified Products (AS2 / AS4 / ebXML)</a></span><span class="rmeta">Drummond Group · official registry</span><p class="rdesc">Live list of who's actually AS2-certified today — check this before quoting any competitor's certification status, since it changes quarterly.</p></li>
+        <li><span class="rtitle"><a href="https://aws.amazon.com/about-aws/whats-new/2023/06/aws-transfer-family-drummond-group-as2-certification/" target="_blank" rel="noopener">AWS Transfer Family's Drummond AS2 Certification Announcement</a></span><span class="rmeta">AWS · official</span><p class="rdesc">A concrete example of what a certification announcement looks like and what it covers.</p></li>
+      </ul>
+
+      <h3>The 2023 breaches, in depth</h3>
+      <ul class="reslist">
+        <li><span class="rtitle"><a href="https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a" target="_blank" rel="noopener">CISA Advisory AA23-158A — Cl0p Ransomware Exploiting MOVEit</a></span><span class="rmeta">CISA · official US government advisory</span><p class="rdesc">The best single write-up — plain, technical, and it's the source connecting MOVEit back to the earlier Accellion and GoAnywhere incidents.</p></li>
+        <li><span class="rtitle"><a href="https://unit42.paloaltonetworks.com/threat-brief-moveit-cve-2023-34362/" target="_blank" rel="noopener">Unit 42 Threat Brief — MOVEit CVEs</a></span><span class="rmeta">Palo Alto Networks</span><p class="rdesc">Deepest technical detail on the SQL injection chain and exposure numbers.</p></li>
+        <li><span class="rtitle"><a href="https://www.rapid7.com/blog/post/ra-cve-2023-0669-analysis/" target="_blank" rel="noopener">Rapid7 Analysis — CVE-2023-0669 (GoAnywhere)</a></span><span class="rmeta">Rapid7</span><p class="rdesc">Read alongside SentinelOne's writeup below — the two disagree on severity scoring, a good exercise in cross-checking vendor threat intel.</p></li>
+        <li><span class="rtitle"><a href="https://www.sentinelone.com/blog/cve-2023-0669/" target="_blank" rel="noopener">SentinelOne — CVE-2023-0669 Fix Guide</a></span><span class="rmeta">SentinelOne</span></li>
+      </ul>
+
+      <h3>Market &amp; buyer perspective</h3>
+      <ul class="reslist">
+        <li><span class="rtitle"><a href="https://www.g2.com/categories/managed-file-transfer-mft" target="_blank" rel="noopener">G2 — Managed File Transfer Category</a></span><span class="rmeta">G2 · buyer reviews, filterable</span></li>
+        <li><span class="rtitle"><a href="https://www.peerspot.com/products/comparisons/goanywhere-mft_vs_moveit" target="_blank" rel="noopener">PeerSpot — GoAnywhere vs. MOVEit</a></span><span class="rmeta">PeerSpot · peer comparison</span></li>
+        <li><span class="rtitle"><a href="https://bluefinch-esbd.com/en/comparison-main-mft-solutions-on-the-market/" target="_blank" rel="noopener">Comparison of the Main MFT Solutions</a></span><span class="rmeta">BlueFinch-ESBD</span></li>
+        <li><span class="rtitle"><a href="https://www.kiteworks.com/managed-file-transfer/managed-file-transfer-software-vendors/" target="_blank" rel="noopener">MFT Buyer's Guide</a></span><span class="rmeta">Kiteworks · vendor-authored, read with that in mind</span></li>
+      </ul>
+
+      <h3 style="margin-top:2.2rem;">About that YouTube video</h3>
+      <div class="reslist">
+        <li class="avoid">
+          <span class="rtitle">"IBM Sterling B2B Integrator Tutorial for Beginners" — <span class="chip bad">not recommended</span></span>
+          <span class="rmeta">YouTube · channel "BizGuide" · published 2025-05-28 · 8:56 · 893 views</span>
+          <p class="rdesc">Checked and rejected: its own description calls Sterling B2B Integrator "CRM software," which it isn't — that's a factual error, not a typo. Nine minutes claiming to cover installation, account setup, and "all of the core features" isn't plausible for a product whose real install is a multi-hour exercise. The metadata reads as templated, mass-produced "Tutorial for Beginners" content (it even carries an Amazon affiliate link) rather than a genuine walkthrough. It's included here specifically as a worked example: this is what to check — publish channel history, view count vs. claimed depth, and whether the description gets basic facts right — before trusting any tutorial video in this space.</p>
+        </li>
+      </div>
+      <p class="note">If you want to search further yourself, phrases that turn up more specific results than "MFT tutorial" do: <code>"Sterling File Gateway" Community Route Provisioner demo</code>, <code>"GoAnywhere" "Advanced Workflows" walkthrough</code>, <code>"MOVEit Automation" task demo</code>. Prefer anything published by IBM/Progress/Fortra's own channels or a named enterprise-integration consultancy over a generic "for beginners" upload.</p>
+    </section>
+
+    <footer class="colophon">
+      Compiled from a 5-angle, 26-source research pass (120 claims extracted). The adversarial verification step was rate-limited mid-run and did not complete — sources above are primary (vendor docs, CISA, threat-intel firms, Drummond Group's registry) but were not independently cross-examined by a second pass. Re-run the verification step once the session limit resets if you need a fully triple-checked version before this goes into anything customer-facing.
+    </footer>
+  </main>
+</div>
+
+<script>
+  (function(){
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a[href^="#"]'));
+    var sections = links.map(function(a){ return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
+    if (!('IntersectionObserver' in window) || !sections.length) return;
+    var map = new Map();
+    sections.forEach(function(sec, i){ map.set(sec, links[i]); });
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        var link = map.get(entry.target);
+        if (!link) return;
+        if (entry.isIntersecting){
+          links.forEach(function(l){ l.classList.remove('active'); });
+          link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-10% 0px -70% 0px', threshold: 0 });
+    sections.forEach(function(sec){ obs.observe(sec); });
+  })();
+</script>
