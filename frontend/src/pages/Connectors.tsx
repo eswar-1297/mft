@@ -5,10 +5,10 @@ import { usePoll } from '../lib/usePoll'
 import type { Connector } from '../lib/types'
 import { Card, EmptyState, ErrorBanner, Modal, Spinner } from '../components/ui'
 
-// The full target set; only S3 is wired end-to-end today (others show as "coming soon").
+// The full target set; S3 and Azure Blob are wired end-to-end today (others show as "coming soon").
 const TYPES = [
   { value: 'S3', label: 'Amazon S3 / compatible', ready: true },
-  { value: 'AZURE_BLOB', label: 'Azure Blob Storage', ready: false },
+  { value: 'AZURE_BLOB', label: 'Azure Blob Storage', ready: true },
   { value: 'GOOGLE_DRIVE', label: 'Google Drive', ready: false },
   { value: 'SHAREPOINT', label: 'SharePoint', ready: false },
   { value: 'BOX', label: 'Box', ready: false },
@@ -143,30 +143,39 @@ function AddConnectorModal({ open, onClose, onSaved }: { open: boolean; onClose:
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <label className="label">Endpoint (blank = AWS S3)</label>
-            <input className="input" value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder="https://s3.amazonaws.com or MinIO URL" />
+            <label className="label">{type === 'AZURE_BLOB' ? 'Blob endpoint (blank = default account endpoint)' : 'Endpoint (blank = AWS S3)'}</label>
+            <input
+              className="input"
+              value={endpoint}
+              onChange={(e) => setEndpoint(e.target.value)}
+              placeholder={type === 'AZURE_BLOB' ? 'https://<account>.blob.core.windows.net, or Azurite URL' : 'https://s3.amazonaws.com or MinIO URL'}
+            />
           </div>
+          {type !== 'AZURE_BLOB' && (
+            <div>
+              <label className="label">Region</label>
+              <input className="input" value={region} onChange={(e) => setRegion(e.target.value)} />
+            </div>
+          )}
           <div>
-            <label className="label">Region</label>
-            <input className="input" value={region} onChange={(e) => setRegion(e.target.value)} />
-          </div>
-          <div>
-            <label className="label">Bucket</label>
+            <label className="label">{type === 'AZURE_BLOB' ? 'Container name' : 'Bucket'}</label>
             <input className="input" value={bucket} onChange={(e) => setBucket(e.target.value)} />
           </div>
           <div>
-            <label className="label">Access key</label>
+            <label className="label">{type === 'AZURE_BLOB' ? 'Storage account name' : 'Access key'}</label>
             <input className="input" value={accessKey} onChange={(e) => setAccessKey(e.target.value)} />
           </div>
           <div>
-            <label className="label">Secret key (encrypted)</label>
+            <label className="label">{type === 'AZURE_BLOB' ? 'Account key (encrypted)' : 'Secret key (encrypted)'}</label>
             <input className="input" type="password" value={secretKey} onChange={(e) => setSecretKey(e.target.value)} />
           </div>
         </div>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={pathStyle} onChange={(e) => setPathStyle(e.target.checked)} />
-          Path-style access (on for MinIO/most S3-compatibles; off for AWS)
-        </label>
+        {type !== 'AZURE_BLOB' && (
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={pathStyle} onChange={(e) => setPathStyle(e.target.checked)} />
+            Path-style access (on for MinIO/most S3-compatibles; off for AWS)
+          </label>
+        )}
         <button className="btn-primary w-full" disabled={busy || !name || !bucket} onClick={save}>
           {busy ? <Spinner className="text-white" /> : 'Save connector'}
         </button>

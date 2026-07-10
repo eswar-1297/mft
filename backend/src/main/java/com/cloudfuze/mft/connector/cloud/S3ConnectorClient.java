@@ -15,11 +15,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * A short-lived S3 client bound to one connector's configuration and credentials. Distinct from
- * the app's internal object store — this talks to the customer's/partner's external S3 endpoint.
- * Created per operation and closed, so credentials never linger.
+ * An S3 {@link ConnectorClient}. Distinct from the app's internal object store — this talks to
+ * the customer's/partner's external S3 endpoint.
  */
-public class S3ConnectorClient implements AutoCloseable {
+public class S3ConnectorClient implements ConnectorClient {
 
     private final S3Client s3;
     private final String bucket;
@@ -40,7 +39,7 @@ public class S3ConnectorClient implements AutoCloseable {
         this.s3 = builder.build();
     }
 
-    /** Download an object from the external bucket to a local staging file. */
+    @Override
     public void download(String objectKey, Path target) {
         try {
             Files.deleteIfExists(target); // toFile uses CREATE_NEW
@@ -51,7 +50,7 @@ public class S3ConnectorClient implements AutoCloseable {
                 ResponseTransformer.toFile(target));
     }
 
-    /** Upload a local file to the external bucket at the given key. Returns bytes uploaded. */
+    @Override
     public long upload(String objectKey, Path source) {
         long size = sizeOf(source);
         s3.putObject(PutObjectRequest.builder().bucket(bucket).key(objectKey).contentLength(size).build(),

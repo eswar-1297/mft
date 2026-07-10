@@ -6,7 +6,7 @@ import com.cloudfuze.mft.connector.SftpConnectionDetails;
 import com.cloudfuze.mft.connector.SftpConnector;
 import com.cloudfuze.mft.connector.cloud.CloudConnector;
 import com.cloudfuze.mft.connector.cloud.ConnectorService;
-import com.cloudfuze.mft.connector.cloud.S3ConnectorClient;
+import com.cloudfuze.mft.connector.cloud.ConnectorClient;
 import com.cloudfuze.mft.partner.Partner;
 import com.cloudfuze.mft.partner.PartnerService;
 import com.cloudfuze.mft.pgp.PgpService;
@@ -67,7 +67,7 @@ public class StepExecutor {
             CloudConnector conn = connectorService.get(UUID.fromString(require(step, "connectorId")));
             String objectKey = require(step, "objectKey");
             Path stage = stage("pickup-conn");
-            try (S3ConnectorClient client = connectorService.openS3(conn)) {
+            try (ConnectorClient client = connectorService.open(conn)) {
                 client.download(objectKey, stage);
                 StorageService.StoredObject stored = storage.putFile(stage, basename(objectKey), null);
                 return new Artifact(stored.key(), basename(objectKey), stored.sha256(), stored.size());
@@ -139,7 +139,7 @@ public class StepExecutor {
             CloudConnector conn = connectorService.get(UUID.fromString(require(step, "connectorId")));
             String objectKey = require(step, "objectKey");
             Path stage = stage("send-conn");
-            try (S3ConnectorClient client = connectorService.openS3(conn)) {
+            try (ConnectorClient client = connectorService.open(conn)) {
                 storage.getToFile(current.key(), stage);
                 long bytes = client.upload(objectKey, stage);
                 return new Artifact(current.key(), current.filename(), Checksums.sha256(stage), bytes);

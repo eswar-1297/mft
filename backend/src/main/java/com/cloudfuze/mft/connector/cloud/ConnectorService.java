@@ -43,9 +43,9 @@ public class ConnectorService {
             throw new ApiException(HttpStatus.CONFLICT, "A connector with that name already exists");
         }
         ConnectorType type = parseType(req.type());
-        if (type != ConnectorType.S3) {
+        if (type != ConnectorType.S3 && type != ConnectorType.AZURE_BLOB) {
             throw new ApiException(HttpStatus.BAD_REQUEST,
-                    type + " connectors are not implemented yet (S3 is available today)");
+                    type + " connectors are not implemented yet (S3 and Azure Blob are available today)");
         }
         String secretEnc = (req.secretKey() != null && !req.secretKey().isBlank())
                 ? vault.encrypt(req.secretKey())
@@ -65,13 +65,14 @@ public class ConnectorService {
         audit.record("connector.deleted", "connector", id.toString(), Map.of("name", c.getName()));
     }
 
-    /** Open an S3 client for this connector, decrypting its stored secret. Caller must close it. */
-    public S3ConnectorClient openS3(CloudConnector c) {
-        if (c.getType() != ConnectorType.S3) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Not an S3 connector");
-        }
+    /** Open a client for this connector, decrypting its stored secret. Caller must close it. */
+    public ConnectorClient open(CloudConnector c) {
         String secret = c.getSecretEnc() != null ? vault.decrypt(c.getSecretEnc()) : "";
-        return new S3ConnectorClient(c, secret);
+        return switch (c.getType()) {
+            case S3 -> new S3ConnectorClient(c, secret);
+            case AZURE_BLOB -> new AzureBlobConnectorClient(c, secret);
+            default -> throw new ApiException(HttpStatus.BAD_REQUEST, c.getType() + " connectors are not implemented yet");
+        };
     }
 
     /**
@@ -80,7 +81,7 @@ public class ConnectorService {
      */
     public void test(UUID id) {
         CloudConnector c = get(id);
-        try (S3ConnectorClient client = openS3(c)) {
+        try (ConnectorClient client = open(c)) {
             Path probe = Files.createTempFile("mft-conn-test-", ".txt");
             Path back = Files.createTempFile("mft-conn-back-", ".txt");
             try {
