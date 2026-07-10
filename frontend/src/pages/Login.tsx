@@ -48,11 +48,11 @@ export default function Login() {
             Secure, provable file transfer for regulated enterprises.
           </h1>
           <p className="mt-4 max-w-md text-white/70">
-            Petabyte-scale engine, 40+ connectors, tamper-evident audit, and a clean security
-            record — unlike breached incumbents.
+            Real SHA-256-verified transfers, a tamper-evident audit log, and database-enforced
+            tenant isolation — security built into the architecture, not bolted on.
           </p>
           <div className="mt-8 flex items-center gap-2 text-sm text-white/80">
-            <ShieldCheck size={18} /> SOC 2 · ISO 27001 · Zero-breach record
+            <ShieldCheck size={18} /> AES-256-GCM vault · Hash-chained audit · No reported breaches to date
           </div>
         </div>
         <div className="text-xs text-white/50">© CloudFuze, Inc.</div>

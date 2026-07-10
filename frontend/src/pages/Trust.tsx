@@ -6,7 +6,9 @@ import type { SiemConfig } from '../lib/types'
 import { Card, ErrorBanner, Spinner } from '../components/ui'
 import { formatRelative } from '../lib/format'
 
-const CERTS = ['SOC 2 Type II', 'ISO 27001', 'GDPR', 'HIPAA-ready']
+// Pursued, not yet earned — never render these as if they were held certifications.
+// Update only when the actual third-party audit/attestation exists.
+const CERTS_IN_PROGRESS = ['SOC 2 Type II', 'ISO 27001', 'GDPR', 'HIPAA-ready']
 
 const CONTROLS = [
   {
@@ -43,19 +45,28 @@ export default function Trust() {
         <div className="flex items-center gap-3">
           <ShieldCheck size={28} />
           <div>
-            <div className="text-lg font-semibold">Zero-breach record</div>
+            <div className="text-lg font-semibold">No reported breaches to date</div>
             <div className="text-sm text-white/70">
-              Unlike breached incumbents (MOVEit 2023: 2,500+ orgs; GoAnywhere 2023), CloudFuze has a
-              clean security history.
+              MOVEit (2023) and GoAnywhere (2023) show why MFT products are a standing target.
+              CloudFuze is built security-first from day one — this is a track record to keep, not a
+              guarantee.
             </div>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {CERTS.map((c) => (
-            <span key={c} className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
-              {c}
-            </span>
-          ))}
+        <div className="mt-4">
+          <div className="text-xs font-medium uppercase tracking-wide text-white/60">
+            Compliance roadmap — in progress, not yet certified
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {CERTS_IN_PROGRESS.map((c) => (
+              <span key={c} className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-medium text-white/85">
+                {c}
+              </span>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-white/60">
+            Ask for current audit status before relying on any of these in a procurement decision.
+          </p>
         </div>
       </div>
 
