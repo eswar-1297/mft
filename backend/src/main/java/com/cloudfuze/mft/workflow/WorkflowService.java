@@ -90,7 +90,7 @@ public class WorkflowService {
                 Map.of("workflow", def.getName()));
 
         PipelineJob job = new PipelineJob(tenantId, def.getId().toString(), run.getId().toString(),
-                def.getName(), steps);
+                def.getName(), steps, null);
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setTaskQueue(props.getTaskQueue())
                 .setWorkflowId("pipeline-" + run.getId())
@@ -98,6 +98,62 @@ public class WorkflowService {
         PipelineWorkflow workflow = workflowClient.newWorkflowStub(PipelineWorkflow.class, options);
         WorkflowClient.start(workflow::run, job);
         return run;
+    }
+
+    /**
+     * Start a pipeline run seeded with an artifact we already have (e.g. a decrypted AS2 receipt),
+     * skipping the need for the workflow's own PICKUP step. If the workflow's first step is PICKUP,
+     * it's dropped from the run — the same definition still works for manual/scheduled runs, which
+     * call {@link #run(UUID)} instead and keep their PICKUP step.
+     */
+    @Transactional
+    public WorkflowRun runSeeded(UUID workflowId, Artifact seed) {
+        String tenantId = TenantContext.get();
+        if (tenantId == null) {
+            throw new IllegalStateException("No tenant bound");
+        }
+        WorkflowDef def = get(workflowId);
+        List<WorkflowStep> steps = WorkflowSteps.fromJson(def.getStepsJson());
+        if (!steps.isEmpty() && steps.get(0).type() == StepType.PICKUP) {
+            steps = steps.subList(1, steps.size());
+        }
+
+        WorkflowRun run = new WorkflowRun(UUID.randomUUID(), def.getId(), def.getName());
+        runs.save(run);
+        audit.record("workflow.run.created", "workflow_run", run.getId().toString(),
+                Map.of("workflow", def.getName(), "trigger", "as2"));
+
+        PipelineJob job = new PipelineJob(tenantId, def.getId().toString(), run.getId().toString(),
+                def.getName(), steps, seed);
+        WorkflowOptions options = WorkflowOptions.newBuilder()
+                .setTaskQueue(props.getTaskQueue())
+                .setWorkflowId("pipeline-" + run.getId())
+                .build();
+        PipelineWorkflow workflow = workflowClient.newWorkflowStub(PipelineWorkflow.class, options);
+        WorkflowClient.start(workflow::run, job);
+        return run;
+    }
+
+    /** Attach (or replace) the AS2 partner whose messages auto-run this workflow. */
+    @Transactional
+    public WorkflowDef setAs2Trigger(UUID workflowId, UUID as2PartnerId) {
+        WorkflowDef def = get(workflowId);
+        def.setAs2TriggerPartnerId(as2PartnerId);
+        defs.save(def);
+        audit.record("workflow.as2trigger.set", "workflow", workflowId.toString(),
+                Map.of("as2PartnerId", as2PartnerId.toString(), "name", def.getName()));
+        return def;
+    }
+
+    /** Remove a workflow's AS2 trigger. */
+    @Transactional
+    public WorkflowDef clearAs2Trigger(UUID workflowId) {
+        WorkflowDef def = get(workflowId);
+        def.setAs2TriggerPartnerId(null);
+        defs.save(def);
+        audit.record("workflow.as2trigger.cleared", "workflow", workflowId.toString(),
+                Map.of("name", def.getName()));
+        return def;
     }
 
     /** Stable Temporal workflow id for a definition's schedule (one cron workflow per definition). */

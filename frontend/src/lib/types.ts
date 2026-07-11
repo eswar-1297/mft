@@ -186,6 +186,7 @@ export interface Workflow {
   lastRunAt: string | null
   lastStatus: string | null
   cronSchedule: string | null
+  as2TriggerPartnerId: string | null
 }
 
 export interface StepResult {

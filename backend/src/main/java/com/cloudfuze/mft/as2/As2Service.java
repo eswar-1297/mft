@@ -7,6 +7,9 @@ import com.cloudfuze.mft.tenant.TenantContext;
 import com.cloudfuze.mft.transfer.Transfer;
 import com.cloudfuze.mft.transfer.TransferDirection;
 import com.cloudfuze.mft.transfer.TransferRepository;
+import com.cloudfuze.mft.workflow.Artifact;
+import com.cloudfuze.mft.workflow.WorkflowDefRepository;
+import com.cloudfuze.mft.workflow.WorkflowService;
 import org.bouncycastle.cms.CMSAlgorithm;
 import org.bouncycastle.cms.CMSEnvelopedData;
 import org.bouncycastle.cms.CMSEnvelopedDataGenerator;
@@ -64,11 +67,14 @@ public class As2Service {
     private final StorageService storage;
     private final TransferRepository transfers;
     private final AuditService audit;
+    private final WorkflowDefRepository workflowDefs;
+    private final WorkflowService workflowService;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
     public As2Service(As2IdentityRepository identities, As2PartnerRepository partners,
                       As2CertificateUtil certUtil, CryptoVault vault, StorageService storage,
-                      TransferRepository transfers, AuditService audit) {
+                      TransferRepository transfers, AuditService audit,
+                      WorkflowDefRepository workflowDefs, WorkflowService workflowService) {
         this.identities = identities;
         this.partners = partners;
         this.certUtil = certUtil;
@@ -76,6 +82,8 @@ public class As2Service {
         this.storage = storage;
         this.transfers = transfers;
         this.audit = audit;
+        this.workflowDefs = workflowDefs;
+        this.workflowService = workflowService;
     }
 
     public record As2SendResult(boolean success, String disposition, long bytesSent) {
@@ -157,9 +165,10 @@ public class As2Service {
                     sender.getPartnerAs2Id(), filename, "as2:" + as2From);
             transfer.markRunning();
             Path stage = Files.createTempFile("mft-as2-recv-", ".stage");
+            StorageService.StoredObject stored;
             try {
                 Files.write(stage, original);
-                StorageService.StoredObject stored = storage.putFile(stage, filename, null);
+                stored = storage.putFile(stage, filename, null);
                 transfer.markSucceeded(stored.key(), stored.size(), stored.sha256());
             } finally {
                 Files.deleteIfExists(stage);
@@ -167,6 +176,11 @@ public class As2Service {
             transfers.save(transfer);
             audit.record("as2.message.received", "transfer", transfer.getId().toString(),
                     Map.of("partnerAs2Id", as2From, "bytes", original.length));
+
+            workflowDefs.findScopedByAs2TriggerPartnerId(sender.getId()).ifPresent(def ->
+                    workflowService.runSeeded(def.getId(),
+                            new Artifact(stored.key(), filename, stored.sha256(), stored.size())));
+
             processed = true;
         } catch (Exception e) {
             audit.record("as2.message.rejected", "as2partner", sender.getId().toString(),

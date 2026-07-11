@@ -35,7 +35,7 @@ public class PipelineWorkflowImpl implements PipelineWorkflow {
         activities.runStarted(job.tenantId(), job.runId());
 
         List<Map<String, Object>> results = new ArrayList<>();
-        Artifact current = Artifact.none();
+        Artifact current = job.seedArtifact() != null ? job.seedArtifact() : Artifact.none();
         List<WorkflowStep> steps = job.steps();
 
         for (int i = 0; i < steps.size(); i++) {

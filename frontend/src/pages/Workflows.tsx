@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import {
-  Plus, Play, Trash2, ArrowDown, ArrowUp, X, Clock,
+  Plus, Play, Trash2, ArrowDown, ArrowUp, X, Clock, Zap,
   Download, Lock, Unlock, CheckCircle2, Upload, Archive, Bell, CircleCheck, CircleX, Circle,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { usePoll } from '../lib/usePoll'
-import type { Connector, Partner, StepResult, StepType, Workflow, WorkflowRun, WorkflowStep } from '../lib/types'
+import type { As2Partner, Connector, Partner, StepResult, StepType, Workflow, WorkflowRun, WorkflowStep } from '../lib/types'
 import { Card, EmptyState, ErrorBanner, Modal, Spinner, StatusBadge } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 
@@ -28,6 +28,8 @@ export default function Workflows() {
   const [builderOpen, setBuilderOpen] = useState(false)
   const [busyRun, setBusyRun] = useState<string | null>(null)
   const [scheduling, setScheduling] = useState<Workflow | null>(null)
+  const [triggering, setTriggering] = useState<Workflow | null>(null)
+  const { data: as2Partners } = usePoll<As2Partner[]>(() => api('/api/as2-partners'), 0)
 
   const list = workflows ?? []
   const runs = runsPage?.content ?? []
@@ -79,9 +81,17 @@ export default function Workflows() {
                         <Clock size={11} /> {w.cronSchedule}
                       </span>
                     )}
+                    {w.as2TriggerPartnerId && (
+                      <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-lightblue px-2 py-0.5 text-brand">
+                        <Zap size={11} /> {as2PartnerName(as2Partners, w.as2TriggerPartnerId)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-1">
+                  <button className="btn-ghost !px-2 !py-1.5 text-xs" onClick={() => setTriggering(w)} title="AS2 trigger">
+                    <Zap size={15} />
+                  </button>
                   <button className="btn-ghost !px-2 !py-1.5 text-xs" onClick={() => setScheduling(w)} title="Schedule">
                     <Clock size={15} />
                   </button>
@@ -118,8 +128,18 @@ export default function Workflows() {
         onClose={() => setScheduling(null)}
         onSaved={() => { setScheduling(null); refresh() }}
       />
+      <TriggerModal
+        workflow={triggering}
+        as2Partners={as2Partners ?? []}
+        onClose={() => setTriggering(null)}
+        onSaved={() => { setTriggering(null); refresh() }}
+      />
     </div>
   )
+}
+
+function as2PartnerName(partners: As2Partner[] | null | undefined, partnerId: string) {
+  return partners?.find((p) => p.id === partnerId)?.name ?? 'AS2 partner'
 }
 
 function PipelineStrip({ steps }: { steps: WorkflowStep[] }) {
@@ -412,6 +432,80 @@ function ScheduleModal({
           {workflow.cronSchedule && (
             <button className="btn-ghost text-danger" disabled={busy} onClick={clear}>
               Remove schedule
+            </button>
+          )}
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+function TriggerModal({
+  workflow, as2Partners, onClose, onSaved,
+}: {
+  workflow: Workflow | null
+  as2Partners: As2Partner[]
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [partnerId, setPartnerId] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  if (!workflow) return null
+
+  async function save() {
+    if (!partnerId) return
+    setBusy(true); setErr(null)
+    try {
+      await api(`/api/workflows/${workflow!.id}/as2-trigger`, { method: 'POST', body: { as2PartnerId: partnerId } })
+      onSaved()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to set trigger')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function clear() {
+    setBusy(true); setErr(null)
+    try {
+      await api(`/api/workflows/${workflow!.id}/as2-trigger`, { method: 'DELETE' })
+      onSaved()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal open={!!workflow} title={`AS2 trigger · ${workflow.name}`} onClose={onClose}>
+      <div className="space-y-3">
+        <ErrorBanner message={err} />
+        <p className="text-sm text-muted">
+          Auto-run this workflow the instant this AS2 partner sends us a file — no polling, no PICKUP
+          step needed (one is skipped automatically if present).
+        </p>
+        {workflow.as2TriggerPartnerId && (
+          <div className="rounded-lg bg-lightblue px-3 py-2 text-sm text-brand">
+            Currently triggered by: <span className="font-medium">{as2PartnerName(as2Partners, workflow.as2TriggerPartnerId)}</span>
+          </div>
+        )}
+        <div>
+          <label className="label">AS2 partner</label>
+          <select className="input" value={partnerId} onChange={(e) => setPartnerId(e.target.value)}>
+            <option value="">Select partner…</option>
+            {as2Partners.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.partnerAs2Id})</option>)}
+          </select>
+        </div>
+        <div className="flex gap-2">
+          <button className="btn-primary flex-1" disabled={busy || !partnerId} onClick={save}>
+            {busy ? <Spinner className="text-white" /> : 'Set trigger'}
+          </button>
+          {workflow.as2TriggerPartnerId && (
+            <button className="btn-ghost text-danger" disabled={busy} onClick={clear}>
+              Remove trigger
             </button>
           )}
         </div>

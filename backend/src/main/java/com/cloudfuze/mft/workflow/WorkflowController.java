@@ -85,6 +85,23 @@ public class WorkflowController {
         return WorkflowView.of(workflowService.unschedule(id));
     }
 
+    public record As2TriggerRequest(UUID as2PartnerId) {
+    }
+
+    /** Auto-run this workflow the moment the given AS2 partner sends us a message. */
+    @PostMapping("/{id}/as2-trigger")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    public WorkflowView setAs2Trigger(@PathVariable UUID id, @RequestBody As2TriggerRequest req) {
+        return WorkflowView.of(workflowService.setAs2Trigger(id, req.as2PartnerId()));
+    }
+
+    /** Remove a workflow's AS2 trigger. */
+    @DeleteMapping("/{id}/as2-trigger")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    public WorkflowView clearAs2Trigger(@PathVariable UUID id) {
+        return WorkflowView.of(workflowService.clearAs2Trigger(id));
+    }
+
     @GetMapping("/runs")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','OPERATOR','AUDITOR')")
     public Page<WorkflowRunView> runs(

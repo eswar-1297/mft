@@ -14,7 +14,8 @@ public record WorkflowView(
         String createdAt,
         String lastRunAt,
         String lastStatus,
-        String cronSchedule) {
+        String cronSchedule,
+        String as2TriggerPartnerId) {
 
     public static WorkflowView of(WorkflowDef d) {
         return new WorkflowView(
@@ -25,6 +26,7 @@ public record WorkflowView(
                 d.getCreatedAt().toString(),
                 d.getLastRunAt() != null ? d.getLastRunAt().toString() : null,
                 d.getLastStatus(),
-                d.getCronSchedule());
+                d.getCronSchedule(),
+                d.getAs2TriggerPartnerId() != null ? d.getAs2TriggerPartnerId().toString() : null);
     }
 }

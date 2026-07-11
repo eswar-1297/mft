@@ -48,6 +48,10 @@ public class WorkflowDef {
     @Column(name = "cron_schedule")
     private String cronSchedule;
 
+    /** When set, this workflow auto-runs the moment this AS2 partner sends us a message. */
+    @Column(name = "as2_trigger_partner_id")
+    private UUID as2TriggerPartnerId;
+
     protected WorkflowDef() {
     }
 
@@ -102,5 +106,13 @@ public class WorkflowDef {
 
     public void setCronSchedule(String cronSchedule) {
         this.cronSchedule = cronSchedule;
+    }
+
+    public UUID getAs2TriggerPartnerId() {
+        return as2TriggerPartnerId;
+    }
+
+    public void setAs2TriggerPartnerId(UUID as2TriggerPartnerId) {
+        this.as2TriggerPartnerId = as2TriggerPartnerId;
     }
 }
